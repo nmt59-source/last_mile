@@ -138,9 +138,12 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .cat-name{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);flex:1}
 .cat-count{font-size:10px;color:var(--text3)}
 .tasks{padding:0 18px 10px;display:flex;flex-direction:column;gap:2px}
-.ti{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:6px;border:1px solid transparent;cursor:pointer;transition:all .14s}
-.ti:hover{background:var(--bg2);border-color:var(--border)}
-.ti.sel{background:rgba(201,168,76,0.06);border-color:rgba(201,168,76,0.26)}
+.ti{display:flex;align-items:center;gap:10px;padding:8px 9px 8px 7px;border-radius:6px;border:1px solid transparent;border-left:3px solid transparent;cursor:pointer;transition:all .14s}
+.ti:hover{background:var(--bg2);border-color:var(--border);border-left-color:var(--border)}
+.ti.sel{background:rgba(201,168,76,0.06);border-color:rgba(201,168,76,0.26);border-left-color:var(--gold)}
+.ti.st-prog{border-left-color:var(--amber)!important}
+.ti.st-wait{border-left-color:var(--blue)!important}
+.ti.st-done{border-left-color:var(--green)!important}
 .ti-chk{width:16px;height:16px;border:1.5px solid var(--border2);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .18s;cursor:pointer}
 .ti-chk:hover{border-color:var(--gold)}
 .ti-chk.done{background:var(--green);border-color:var(--green);color:#fff}
@@ -195,9 +198,10 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .step-lbl-item.active{color:var(--gold)}
 .step-lbl-item.done{color:var(--green)}
 /* STEP CARDS */
-.step-card{background:var(--bg2);border:1px solid var(--border2);border-radius:9px;overflow:hidden;transition:border-color .2s}
+.step-card{background:var(--bg2);border:1px solid var(--border2);border-radius:9px;overflow:visible;transition:border-color .2s}
 .step-card.active-step{border-color:rgba(201,168,76,0.35)}
-.step-card-hdr{display:flex;align-items:center;gap:10px;padding:12px 15px}
+.step-card-hdr{display:flex;align-items:center;gap:10px;padding:12px 15px;border-radius:9px}
+.step-card.active-step .step-card-hdr,.step-card.done-step .step-card-hdr{border-radius:9px 9px 0 0}
 .step-num{width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg3);color:var(--text3)}
 .step-card.active-step .step-num{background:rgba(201,168,76,0.15);color:var(--gold)}
 .step-card.done-step .step-num{background:var(--green);color:#fff}
@@ -206,8 +210,18 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .step-card.pending-step .step-card-status{background:rgba(94,90,80,0.2);color:var(--text3)}
 .step-card.active-step .step-card-status{background:rgba(201,168,76,0.12);color:var(--gold)}
 .step-card.done-step .step-card-status{background:rgba(106,173,126,0.12);color:var(--green)}
-.step-card-body{padding:0 15px 15px;border-top:1px solid var(--border);display:none}
+.step-card-body{padding:0 15px 15px;border-top:1px solid var(--border);display:none;overflow:visible}
 .step-card.active-step .step-card-body,.step-card.done-step .step-card-body{display:block;padding-top:12px}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-hdr{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:400}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:0 2px;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-body{overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;flex:1}
+.modal-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
 /* IN-STEP ELEMENTS */
 .step-desc{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:12px}
 .field-row{margin-bottom:10px}
@@ -666,14 +680,15 @@ function renderDash(){
         const urgLabel=t.urgency==='immediate'?'Do first':t.urgency==='soon'?'Soon':'Later';
         const stLabel={'todo':'','prog':'In Progress','wait':'Waiting','done':'Done'}[st];
         const stCls={'todo':'s-todo','prog':'s-prog','wait':'s-wait','done':'s-done'}[st];
-        return `<div class="ti${selTask&&selTask.id===t.id?' sel':''}" id="ti${t.id}" onclick="selT('${t.id}')">
-          <div class="ti-chk${isDone?' done':''}" id="chk${t.id}" onclick="event.stopPropagation();cycleStatus('${t.id}')">${isDone?'✓':''}</div>
+        const stripeCls={'todo':'','prog':' st-prog','wait':' st-wait','done':' st-done'}[st];
+        return `<div class="ti${selTask&&selTask.id===t.id?' sel':''}${stripeCls}" id="ti${t.id}" onclick="selT('${t.id}')">
+          <div class="ti-chk${isDone?' done':''}" id="chk${t.id}" onclick="event.stopPropagation();cycleStatus('${t.id}')">${isDone?'\u2713':''}</div>
           <div class="ti-body">
             <div class="ti-name${isDone?' done':''}">${t.name}</div>
             <div class="ti-sub">${t.institution||''}</div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-            ${st!=='todo'?`<span class="ti-status ${stCls}">${stLabel}</span>`:`<div class="urg ${urgCls}">${urgLabel}</div>`}
+          <div style="flex-shrink:0">
+            ${st==='prog'?`<span style="font-size:9px;color:var(--amber)">&#9679;</span>`:st==='wait'?`<span style="font-size:9px;color:var(--blue)">&#9679;</span>`:st==='done'?`<span style="font-size:10px;color:var(--green)">\u2713</span>`:`<div class="urg ${urgCls}">${urgLabel}</div>`}
           </div>
         </div>`;}).join('')}</div>
     </div>`).join('');
@@ -1375,7 +1390,10 @@ function employerWorkflow(t,wf){
       <div class="step-card-body">
         <div class="field-row"><label class="field-lbl">Company name <span>*</span></label><input class="field-inp" id="emp-co-${t.id}" placeholder="Where they worked" value="${wf.data.co||''}"/></div>
         <div class="field-row"><label class="field-lbl">Their job title (optional)</label><input class="field-inp" id="emp-title-${t.id}" placeholder="e.g. Manager, Teacher, Engineer" value="${wf.data.title||''}"/></div>
-        <div class="step-actions"><button class="sa-btn primary" onclick="empStep1('${t.id}')">Draft HR notification</button></div>
+        <div class="field-row"><label class="field-lbl">HR contact name (if known)</label><input class="field-inp" id="emp-hr-${t.id}" placeholder="e.g. Jane Smith, HR Manager" value="${wf.data.hrContact||''}"/></div>
+        <div class="field-row"><label class="field-lbl">HR email or phone (if known)</label><input class="field-inp" id="emp-hremail-${t.id}" placeholder="e.g. hr@company.com or 555-0100" value="${wf.data.hrEmail||''}"/></div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.6;padding:7px 9px;background:var(--bg3);border-radius:5px;margin-bottom:2px">The letter will ask HR to: stop payroll, issue the final paycheck, confirm group life insurance, share 401(k) or pension beneficiary process, and offer COBRA to any dependents.</div>
+        <div class="step-actions" style="margin-top:10px"><button class="sa-btn primary" onclick="empStep1('${t.id}')">Draft HR notification</button></div>
       </div>
     </div>`;
   }
@@ -1411,14 +1429,16 @@ function employerWorkflow(t,wf){
 async function empStep1(tid){
   const co=(document.getElementById('emp-co-'+tid)?.value||'').trim();if(!co)return;
   const title=document.getElementById('emp-title-'+tid)?.value||'';
-  getWF(tid).data.co=co;getWF(tid).data.title=title;
+  const hrContact=document.getElementById('emp-hr-'+tid)?.value||'';
+  const hrEmail=document.getElementById('emp-hremail-'+tid)?.value||'';
+  getWF(tid).data.co=co;getWF(tid).data.title=title;getWF(tid).data.hrContact=hrContact;getWF(tid).data.hrEmail=hrEmail;
   addTrace(tid,'step','Step 1','Drafting HR notification for '+co);
   getWF(tid).draftStreaming=true;setWFStep(tid,1);
   await delay(60);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
     const sig=document.getElementById('sig-inp')?.value||'[Executor Name]';
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Use the exact names provided — do NOT use brackets for deceased or executor name. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nState: ${A.state}\nExecutor relationship: ${A.rel||'executor'}, signing as: ${sig}\nDate: ${today}`}]})});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Use the exact names provided — do NOT use brackets for deceased or executor name. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nHR contact: ${getWF(tid).data.hrContact||'HR Department'}\nHR email/phone: ${getWF(tid).data.hrEmail||'not specified'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nState: ${A.state}\nExecutor relationship: ${A.rel||'executor'}, signing as: ${sig}\nDate: ${today}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     const el=document.getElementById('draft-stream-'+tid);
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;if(el)el.textContent=txt;}}catch(e){}}}
@@ -1468,23 +1488,29 @@ function lifeInsWorkflow(t,wf){
   const steps=[{label:'Policy details',status:step>0?'done':step===0?'active':'pending'},{label:'Draft claim',status:step>1?'done':step===1?'active':'pending'},{label:'Send',status:step>2?'done':step===2?'active':'pending'}];
   let body=renderStepTrack(steps);
   if(step===0){
+    const hasTaxHint=window._bankUploaded;
     body+=`<div class="step-card active-step">
       <div class="step-card-hdr"><div class="step-num">1</div><div class="step-card-title">Policy details</div><span class="step-card-status">Fill in</span></div>
       <div class="step-card-body">
-        <div class="field-row"><label class="field-lbl">Insurance company <span>*</span></label><input class="field-inp" id="ins-co-${t.id}" placeholder="e.g. MetLife, Prudential, New York Life" value="${wf.data.co||''}"/></div>
-        <div class="field-row"><label class="field-lbl">Policy number (if you have it)</label><input class="field-inp" id="ins-pol-${t.id}" placeholder="e.g. ML-123456789" value="${wf.data.pol||''}"/></div>
-        ${window._bankUploaded?'<div class="guard-banner" style="margin-bottom:8px">Tip: Monthly premium payments in the bank statement may show the insurance company name if you are unsure.</div>':''}
-        <div class="step-actions"><button class="sa-btn primary" onclick="insStep1('${t.id}')">Draft claim letter</button></div>
+        <p class="step-desc">Enter the insurance company name and policy number. If you are not sure of the policy number, check the bank statement for premium payment charges — the company name will appear there.</p>
+        ${hasTaxHint?'<div class="guard-banner" style="margin-bottom:8px">📊 A financial document was uploaded. Check it for monthly premium payments to identify the insurance company.</div>':''}
+        <div class="field-row"><label class="field-lbl">Insurance company <span>*</span></label><input class="field-inp" id="ins-co-${t.id}" placeholder="e.g. MetLife, Prudential, New York Life, Northwestern Mutual" value="${wf.data.co||''}"/></div>
+        <div class="field-row"><label class="field-lbl">Policy number</label><input class="field-inp" id="ins-pol-${t.id}" placeholder="Found on the policy document or premium statement" value="${wf.data.pol||''}"/></div>
+        <div class="field-row"><label class="field-lbl">Beneficiary name (if known)</label><input class="field-inp" id="ins-ben-${t.id}" placeholder="Who is named on the policy" value="${wf.data.ben||''}"/></div>
+        <div class="step-actions" style="margin-top:12px">
+          <button class="sa-btn primary" onclick="insStep1('${t.id}')">Draft claim letter</button>
+          <button class="sa-btn" onclick="openInsContactModal('${t.id}')">Look up insurer contact</button>
+        </div>
       </div>
     </div>`;
   }
   if(step>=1){
     body+=`<div class="step-card ${step===1?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">${step>1?'✓':'2'}</div><div class="step-card-title">Review claim letter</div><span class="step-card-status">${step>1?'Done':'Review'}</span></div>
+      <div class="step-card-hdr"><div class="step-num">${step>1?'\u2713':'2'}</div><div class="step-card-title">Review claim letter</div><span class="step-card-status">${step>1?'Done':'Review'}</span></div>
       <div class="step-card-body">
-        ${wf.draftStreaming?`<div class="draft-box streaming" id="draft-stream-${t.id}"></div>`:''}
-        ${wf.draft&&!wf.draftStreaming?`<div class="draft-box">${wf.draft}</div>`:''}
-        ${step===1&&wf.draft?`<div class="step-actions"><button class="sa-btn primary" onclick="insStep2('${t.id}')">Looks good</button><button class="sa-btn" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy</button></div>`:''}
+        ${wf.draftStreaming?`<div class="draft-box streaming" id="draft-stream-${t.id}" style="min-height:100px"></div>`:''}
+        ${wf.draft&&!wf.draftStreaming?`<div class="draft-box" style="min-height:100px;max-height:300px;overflow-y:auto">${wf.draft}</div>`:''}
+        ${step===1&&wf.draft?`<div class="step-actions"><button class="sa-btn primary" onclick="insStep2('${t.id}')">This looks good</button><button class="sa-btn" onclick="insStep1('${t.id}')">Redraft</button><button class="sa-btn" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy</button></div>`:''}
       </div>
     </div>`;
   }
@@ -1492,12 +1518,34 @@ function lifeInsWorkflow(t,wf){
     body+=`<div class="step-card active-step">
       <div class="step-card-hdr"><div class="step-num">3</div><div class="step-card-title">Send the claim</div><span class="step-card-status">Ready</span></div>
       <div class="step-card-body">
-        <p class="step-desc">Send by email or certified mail. Include a certified copy of the death certificate with the letter.</p>
-        <div class="step-actions"><button class="sa-btn primary" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy letter</button><button class="sa-btn" onclick="togDone('${t.id}')">Mark complete</button></div>
+        <p class="step-desc">Send by email or certified mail. Include a certified copy of the death certificate. The insurer will send a claim form — complete it and return with the death certificate.</p>
+        <div class="step-actions"><button class="sa-btn primary" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy letter</button><button class="sa-btn" style="border-color:var(--green);color:var(--green)" onclick="setStatus('${t.id}','done')">Mark complete</button></div>
       </div>
     </div>`;
   }
   return body;
+}
+async function openInsContactModal(tid){
+  const co=(document.getElementById('ins-co-'+tid)?.value||'').trim()||'your insurance company';
+  openModal('Insurance company contact',`<div id="ins-modal-contact" style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border:1.5px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0"></div>Looking up ${co}…</div>`,
+    `<button class="sa-btn" onclick="closeModal()">Close</button>`);
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'Return JSON only, no markdown: {"phone":"...","claims_phone":"...","hours":"...","url":"...","claims_email":"...","tip":"one practical sentence about filing a death claim with this insurer"}',messages:[{role:'user',content:`Insurance company: ${co}. Provide their death claims department contact details.`}]})});
+    const d=await r.json();
+    const txt=(d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    let c;try{c=JSON.parse(txt);}catch(e){c=null;}
+    const el=document.getElementById('ins-modal-contact');
+    if(el&&c){
+      el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">
+        ${c.claims_phone||c.phone?`<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Claims phone</div><div style="font-size:14px;color:var(--text);font-weight:500">${c.claims_phone||c.phone}</div>${c.hours?`<div style="font-size:11px;color:var(--text3)">${c.hours}</div>`:''}</div>`:''}
+        ${c.claims_email?`<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Claims email</div><div style="font-size:13px;color:var(--text)">${c.claims_email}</div></div>`:''}
+        ${c.url?`<div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Website</div><a href="${c.url.startsWith('http')?c.url:'https://'+c.url}" target="_blank" style="color:var(--gold);font-size:13px">${c.url.replace('https://','').replace('http://','')}</a></div>`:''}
+        ${c.tip?`<div style="padding:8px 10px;background:rgba(212,137,58,0.08);border-radius:6px;font-size:12px;color:var(--amber)">💡 ${c.tip}</div>`:''}
+      </div>`;
+    } else if(el){
+      el.innerHTML=`<div style="font-size:12px;color:var(--text2)">Search "${co} death claim" or visit their website's life insurance claims section.</div>`;
+    }
+  }catch(e){}
 }
 async function insStep1(tid){
   const co=(document.getElementById('ins-co-'+tid)?.value||'').trim();if(!co)return;
@@ -1545,34 +1593,52 @@ function getTaskGuidance(t){
   const n=(t.name||'').toLowerCase();
   // Death certificate guidance
   if(n.includes('death certificate')||n.includes('obtain cert')){
-    return `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;font-size:12px;line-height:1.8;color:var(--text2)">
-      <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">Understanding death certificates</div>
-      <p><strong style="color:var(--text)">Certified copy vs. proof of death:</strong> A <em>certified copy</em> has a raised seal from the county registrar and is required by banks, courts, insurance companies, and government agencies. A <em>proof of death</em> (sometimes called an informational copy) is a photocopy used only for personal records — institutions will reject it.</p>
-      <p style="margin-top:8px"><strong style="color:var(--text)">How many do you need?</strong> Order 10–15 certified copies. Each bank, insurance company, government agency, and court typically keeps one permanently. You will go through them faster than you expect.</p>
-      <p style="margin-top:8px"><strong style="color:var(--text)">How to get them:</strong></p>
-      <div style="margin-top:5px;display:flex;flex-direction:column;gap:5px">
-        <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);flex-shrink:0">1.</span><div><strong style="color:var(--text)">Funeral home</strong> — Fastest. Ask them to order 10–15 certified copies when they file the death certificate. They handle all paperwork.</div></div>
-        <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);flex-shrink:0">2.</span><div><strong style="color:var(--text)">VitalChek.com</strong> — Official government service. 5–10 business days. About $15–25 per copy plus shipping. <a href="https://www.vitalchek.com" target="_blank" style="color:var(--gold)">vitalchek.com</a></div></div>
-        <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);flex-shrink:0">3.</span><div><strong style="color:var(--text)">County vital records office</strong> — In person, same day. Bring your photo ID and $10–25 per copy. Search "[county name] vital records office" to find your local office.</div></div>
+    return `<div style="display:flex;flex-direction:column;gap:8px">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.7">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px">What is a certified copy?</div>
+        A <strong style="color:var(--text)">certified copy</strong> has an official raised seal from the county registrar. Banks, courts, insurance companies, and government agencies require it. A plain photocopy will be rejected. Order <strong style="color:var(--text)">10 to 15 copies</strong> — each institution typically keeps one permanently.
       </div>
-      <div style="margin-top:10px;padding:8px 10px;background:rgba(90,159,212,0.07);border-radius:5px;border:1px solid rgba(90,159,212,0.18)">
-        <div id="funeral-homes-${t.id}" style="font-size:11px;color:var(--blue)">
-          <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border:1.5px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite"></div> Finding funeral homes in ${A.state||'your area'}…</div>
-        </div>
-      </div>
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:2px 0">Choose how to obtain them</div>
+      ${['Funeral home (fastest)','VitalChek.com (online)','County vital records office'].map((opt,i)=>{
+        const bodies=[
+          `<p>Ask the funeral home to order 10 to 15 certified copies when they file the death certificate. This is the fastest option — they handle all the paperwork and know the process. No extra steps on your end.</p>
+           <div id="funeral-homes-${t.id}" style="margin-top:8px;padding:7px 10px;background:rgba(90,159,212,0.07);border-radius:5px;font-size:11px;color:var(--blue)"><div style="display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border:1.5px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0"></div> Finding funeral homes in ${A.state||'your area'}…</div></div>`,
+          `<p>VitalChek is the official government-authorized service. Orders arrive in 5 to 10 business days. Cost is about $15 to $25 per copy plus shipping.</p>
+           <div style="margin-top:8px"><a href="https://www.vitalchek.com" target="_blank"><button class="sa-btn primary" style="font-size:12px">Go to VitalChek.com</button></a></div>`,
+          `<p>Visit the county vital records office in the county where the death occurred. Bring your photo ID and $10 to $25 per copy in cash or card. You can usually get certified copies the same day.</p>
+           <div style="margin-top:8px;padding:7px 10px;background:rgba(212,137,58,0.07);border-radius:5px;font-size:11px;color:var(--amber)">Search "[county name] vital records office" or "[state] department of health vital records" to find your local office.</div>`
+        ];
+        return `<div style="border:1px solid var(--border2);border-radius:8px;overflow:visible;background:var(--bg3)">
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;user-select:none" onclick="toggleGuide('cert-${t.id}-${i}')">
+            <span style="font-size:16px">${['⚰️','🌐','🏛'][i]}</span>
+            <span style="font-size:13px;font-weight:500;color:var(--text);flex:1">${opt}</span>
+            <span style="font-size:11px;color:var(--text3);transition:transform .2s" id="cert-arr-${t.id}-${i}">›</span>
+          </div>
+          <div id="cert-body-${t.id}-${i}" style="display:none;padding:10px 13px 13px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.75">${bodies[i]}</div>
+        </div>`;
+      }).join('')}
     </div>`;
   }
-  // Email / digital account guidance
+  // Email / digital account guidance — accordion
   if(n.includes('email')||n.includes('google account')||n.includes('icloud')||n.includes('apple')||n.includes('facebook')||n.includes('instagram')||n.includes('memoriali')||n.includes('digital account')){
-    return `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;font-size:12px;line-height:1.8;color:var(--text2)">
-      <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">How to handle digital accounts</div>
-      <p>You generally have three options for each account: <strong style="color:var(--text)">memorialize</strong> (preserve as a memorial), <strong style="color:var(--text)">close/delete</strong>, or <strong style="color:var(--text)">download and archive</strong> (preserve data before closing). The right choice depends on what the deceased would have wanted.</p>
-      <div style="margin-top:10px;display:flex;flex-direction:column;gap:7px">
-        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Gmail / Google</strong> — Use Google's Inactive Account Manager or submit a request at <a href="https://support.google.com/accounts/troubleshooter/6357590" target="_blank" style="color:var(--gold)">support.google.com</a>. You can request account data or deletion. You will need a death certificate and your own ID.</div>
-        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Apple ID / iCloud</strong> — Call Apple at <strong style="color:var(--text)">1-800-275-2273</strong>. Apple has a Digital Legacy feature — if the person had nominated a legacy contact, they can access data. Otherwise you need a death certificate and a court order.</div>
-        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Facebook / Instagram</strong> — Submit a Special Request at <a href="https://www.facebook.com/help/1506822589577997" target="_blank" style="color:var(--gold)">facebook.com/help</a>. You can memorialize the account or request removal. Proof of death and relationship required.</div>
-        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Outlook / Microsoft</strong> — Contact Microsoft support at <a href="https://support.microsoft.com" target="_blank" style="color:var(--gold)">support.microsoft.com</a>. Provide death certificate and proof of relationship. They can close the account or provide data access with a court order.</div>
+    const platforms=[
+      {icon:'📧',name:'Gmail / Google',body:`<p>Go to Google's Inactive Account Manager at <a href="https://myaccount.google.com/inactive" target="_blank" style="color:var(--gold)">myaccount.google.com/inactive</a> or submit a next-of-kin request at <a href="https://support.google.com/accounts/troubleshooter/6357590" target="_blank" style="color:var(--gold)">support.google.com</a>. You can request data download or account deletion. You will need a death certificate and your own government ID.</p>`},
+      {icon:'🍎',name:'Apple ID / iCloud',body:`<p>Call Apple Support at <strong style="color:var(--text)">1-800-275-2273</strong>. If the person set up a Digital Legacy contact before passing, that contact can access data. Otherwise you will need a death certificate and a court order. Apple is strict about this process.</p>`},
+      {icon:'📘',name:'Facebook / Instagram',body:`<p>Submit a Special Request at <a href="https://www.facebook.com/help/1506822589577997" target="_blank" style="color:var(--gold)">facebook.com/help</a>. You can choose to memorialize the account (which preserves it as a tribute page) or request permanent removal. Instagram has a separate form at <a href="https://help.instagram.com/264154560391256" target="_blank" style="color:var(--gold)">help.instagram.com</a>. Proof of death and proof of relationship are required.</p>`},
+      {icon:'📮',name:'Outlook / Microsoft',body:`<p>Contact Microsoft support at <a href="https://support.microsoft.com" target="_blank" style="color:var(--gold)">support.microsoft.com</a>. Provide the death certificate and proof of relationship. They can close the account or provide a data download with a court order.</p>`},
+    ];
+    return `<div style="display:flex;flex-direction:column;gap:8px">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.7">
+        For each account you have three options: <strong style="color:var(--text)">memorialize</strong> it as a tribute, <strong style="color:var(--text)">download the data</strong> and then close it, or simply <strong style="color:var(--text)">delete</strong> it. Select a platform below for the exact steps.
       </div>
+      ${platforms.map((p,i)=>`<div style="border:1px solid var(--border2);border-radius:8px;overflow:visible;background:var(--bg3)">
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;user-select:none" onclick="toggleGuide('dig-${t.id}-${i}')">
+          <span style="font-size:16px">${p.icon}</span>
+          <span style="font-size:13px;font-weight:500;color:var(--text);flex:1">${p.name}</span>
+          <span style="font-size:11px;color:var(--text3);transition:transform .2s" id="dig-arr-${t.id}-${i}">›</span>
+        </div>
+        <div id="dig-body-${t.id}-${i}" style="display:none;padding:10px 13px 13px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.75">${p.body}</div>
+      </div>`).join('')}
     </div>`;
   }
   return null;
@@ -1581,31 +1647,21 @@ function getTaskGuidance(t){
 // ── GENERIC WORKFLOW ──
 function genericWorkflow(t,wf){
   const needsLawyer=(t.name||'').toLowerCase().includes('probate')||(t.name||'').toLowerCase().includes('out of state')||(t.name||'').toLowerCase().includes('estate attorney');
-  const contact=getContactInfo(t.name,t.institution);
   const guidance=getTaskGuidance(t);
-  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 
   let body=`<div style="display:flex;flex-direction:column;gap:10px;margin-top:2px">`;
-
-  // Guidance block (death cert, digital accounts, etc.)
   if(guidance){
     body+=guidance;
-    // Trigger funeral home search for death cert task
-    if((t.name||'').toLowerCase().includes('death cert'))setTimeout(()=>loadFuneralHomes(t.id),200);
+    if((t.name||'').toLowerCase().includes('death cert'))setTimeout(()=>{},0); // handled by accordion click
   }
 
-  // Contact info card
+  // Live contact info card
   body+=`<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px">
-    <div style="font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:9px">Contact information</div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      ${contact.phone!=='N/A'?`<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:11px;color:var(--text3);width:40px;flex-shrink:0;padding-top:1px">📞</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Phone</div><div style="font-size:12px;color:var(--text)">${contact.phone}</div><div style="font-size:10px;color:var(--text3)">${contact.hours}</div></div></div>`:''}
-      ${contact.web?`<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:11px;color:var(--text3);width:40px;flex-shrink:0;padding-top:1px">🌐</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Website</div><div style="font-size:12px;color:var(--text)">${contact.web}</div></div></div>`:''}
-      ${contact.email&&contact.email!=='N/A'?`<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:11px;color:var(--text3);width:40px;flex-shrink:0;padding-top:1px">✉</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Email / Form</div><div style="font-size:12px;color:var(--text)">${contact.email}</div></div></div>`:''}
-      ${contact.note?`<div style="margin-top:4px;font-size:11px;color:var(--amber);padding:6px 9px;background:rgba(212,137,58,0.07);border-radius:5px;line-height:1.6">💡 ${contact.note}</div>`:''}
-    </div>
+    <div style="font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Contact information</div>
+    <div id="contact-card-${t.id}"></div>
   </div>`;
+  setTimeout(()=>loadContactInfo(t.id,t.name,t.institution),100);
 
-  // Draft area
   body+=`<div>
     <button class="sa-btn primary" style="width:100%;justify-content:center;display:flex;align-items:center;gap:7px" onclick="draftGenericLetter('${t.id}','${(t.institution||'').replace(/'/g,"\\'")}','${(t.name||'').replace(/'/g,"\\'")}')">✦ Draft letter / form</button>
     <div id="darea-${t.id}" style="margin-top:6px"></div>
@@ -1619,17 +1675,77 @@ async function loadFuneralHomes(tid){
   const el=document.getElementById('funeral-homes-'+tid);
   if(!el||!A.state)return;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'You are a helpful estate specialist. Provide practical resources. No em dashes. Return JSON only: {"resources":[{"name":"...","description":"...","url":"..."}]} with 2-3 items for finding local funeral homes or ordering death certificates in the state.',messages:[{role:'user',content:`State: ${A.state}. Provide 2-3 resources for finding funeral homes or obtaining death certificates in ${A.state}. Include the state vital records office with URL.`}]})});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'Return JSON only, no markdown: {"office":{"name":"...","phone":"...","url":"..."},"nfda":"https://www.nfda.org/find-a-funeral-home"}',messages:[{role:'user',content:`Give the official vital records office for ${A.state} with their exact phone number and website URL.`}]})});
     const d=await r.json();
     const txt=(d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
-    let parsed;
-    try{parsed=JSON.parse(txt);}catch(e){parsed=null;}
-    if(parsed?.resources?.length){
-      el.innerHTML=parsed.resources.map(res=>`<div style="margin-bottom:5px"><strong style="color:var(--text)">${res.name}</strong> — <span style="color:var(--text2)">${res.description}</span> <a href="${res.url}" target="_blank" style="color:var(--gold)">${res.url.replace('https://','')}</a></div>`).join('');
+    let parsed;try{parsed=JSON.parse(txt);}catch(e){parsed=null;}
+    if(parsed?.office){
+      el.innerHTML=`<strong style="color:var(--text)">${parsed.office.name}</strong><br/>${parsed.office.phone?`📞 ${parsed.office.phone} &nbsp;`:''}${parsed.office.url?`<a href="${parsed.office.url}" target="_blank" style="color:var(--gold)">${parsed.office.url.replace('https://','')}</a>`:''}<br/><span style="color:var(--text2)">Find a funeral home: </span><a href="${parsed.nfda||'https://www.nfda.org/find-a-funeral-home'}" target="_blank" style="color:var(--gold)">nfda.org/find-a-funeral-home</a>`;
     } else {
-      el.innerHTML=`<div>Find local funeral homes at <a href="https://www.nfda.org/find-a-funeral-home" target="_blank" style="color:var(--gold)">nfda.org/find-a-funeral-home</a> · ${A.state} vital records: search "${A.state} vital records office"</div>`;
+      el.innerHTML=`${A.state} vital records: search <em>"${A.state} vital records office"</em> · Funeral homes: <a href="https://www.nfda.org/find-a-funeral-home" target="_blank" style="color:var(--gold)">nfda.org</a>`;
     }
-  }catch(e){el.innerHTML=`<div>Find local funeral homes at <a href="https://www.nfda.org/find-a-funeral-home" target="_blank" style="color:var(--gold)">nfda.org/find-a-funeral-home</a></div>`;}
+  }catch(e){el.innerHTML=`Find funeral homes at <a href="https://www.nfda.org/find-a-funeral-home" target="_blank" style="color:var(--gold)">nfda.org/find-a-funeral-home</a>`;}
+}
+
+function toggleGuide(key){
+  // key format: "cert-tid-i" or "dig-tid-i"
+  const [type,...rest]=key.split('-');
+  const idx=rest[rest.length-1];
+  const tidPart=rest.slice(0,-1).join('-');
+  const bodyId=`${type}-body-${tidPart}-${idx}`;
+  const arrId=`${type}-arr-${tidPart}-${idx}`;
+  const body=document.getElementById(bodyId);
+  const arr=document.getElementById(arrId);
+  if(!body)return;
+  const open=body.style.display!=='none';
+  // Close all siblings first
+  document.querySelectorAll(`[id^="${type}-body-${tidPart}-"]`).forEach(el=>{el.style.display='none';});
+  document.querySelectorAll(`[id^="${type}-arr-${tidPart}-"]`).forEach(el=>{el.style.transform='rotate(0deg)';});
+  // If was closed, open it; if was open, leave closed
+  if(!open){
+    body.style.display='block';
+    if(arr)arr.style.transform='rotate(90deg)';
+    // Trigger funeral homes load when that accordion opens
+    if(type==='cert'&&idx==='0')setTimeout(()=>loadFuneralHomes(tidPart),100);
+  }
+}
+
+// ── MODAL HELPERS ──
+function openModal(titleHtml,bodyHtml,footHtml){
+  closeModal();
+  const el=document.createElement('div');
+  el.className='modal-overlay';
+  el.id='global-modal';
+  el.innerHTML=`<div class="modal-box"><div class="modal-hdr"><div class="modal-title">${titleHtml}</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body">${bodyHtml}</div><div class="modal-foot">${footHtml||''}</div></div>`;
+  el.addEventListener('click',e=>{if(e.target===el)closeModal();});
+  document.body.appendChild(el);
+}
+function closeModal(){const el=document.getElementById('global-modal');if(el)el.remove();}
+
+// ── LIVE CONTACT LOOKUP ──
+const contactCache={};
+async function loadContactInfo(tid,taskName,institution){
+  const key=(taskName+institution).toLowerCase();
+  const el=document.getElementById('contact-card-'+tid);
+  if(!el)return;
+  if(contactCache[key]){el.innerHTML=contactCache[key];return;}
+  const cacheKey=key;
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)"><div style="width:8px;height:8px;border:1.5px solid var(--text3);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0"></div>Looking up contact details…</div>`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'Return JSON only, no markdown: {"phone":"...","hours":"...","url":"...","email":"...","tip":"one practical sentence"}. Be specific and accurate. For government agencies give the exact national number. For private companies say to check the account statement.',messages:[{role:'user',content:`Task: ${taskName}\nInstitution: ${institution||taskName}\nState: ${A.state||'US'}\nProvide the specific contact details for the estate services or bereavement department.`}]})});
+    const d=await r.json();
+    const txt=(d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    let c;try{c=JSON.parse(txt);}catch(e){c=null;}
+    const html=`<div style="display:flex;flex-direction:column;gap:6px">
+      ${c?.phone&&c.phone!=='N/A'?`<div style="display:flex;gap:8px"><span style="color:var(--text3);font-size:12px;width:16px;flex-shrink:0">📞</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Phone</div><div style="font-size:12px;color:var(--text)">${c.phone}</div>${c.hours?`<div style="font-size:10px;color:var(--text3)">${c.hours}</div>`:''}</div></div>`:''}
+      ${c?.url?`<div style="display:flex;gap:8px"><span style="color:var(--text3);font-size:12px;width:16px;flex-shrink:0">🌐</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Website</div><a href="${c.url.startsWith('http')?c.url:'https://'+c.url}" target="_blank" style="color:var(--gold);font-size:12px">${c.url.replace('https://','').replace('http://','')}</a></div></div>`:''}
+      ${c?.email&&c.email!=='N/A'?`<div style="display:flex;gap:8px"><span style="color:var(--text3);font-size:12px;width:16px;flex-shrink:0">✉</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Email / Form</div><div style="font-size:12px;color:var(--text)">${c.email}</div></div></div>`:''}
+      ${c?.tip?`<div style="margin-top:2px;font-size:11px;color:var(--amber);padding:6px 9px;background:rgba(212,137,58,0.07);border-radius:5px;line-height:1.55">💡 ${c.tip}</div>`:''}
+    </div>`;
+    contactCache[cacheKey]=html;
+    if(el)el.innerHTML=html;
+    addTrace(tid,'action','Contact lookup',`Found contact info for ${institution||taskName}`);
+  }catch(e){el.innerHTML=`<div style="font-size:12px;color:var(--text3)">Search "${institution||taskName} estate services ${A.state||''}" for contact details.</div>`;}
 }
 
 async function draftGenericLetter(tid,institution,taskName){
