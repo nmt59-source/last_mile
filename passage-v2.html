@@ -120,7 +120,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .ls-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
 /* DASHBOARD */
 #s-dashboard{flex-direction:column;height:100vh;overflow:hidden}
-#tab-checklist{flex:1;overflow:hidden;min-height:0}
 .dash-hdr{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0}
 .dash-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:400}
 .dash-title em{color:var(--gold);font-style:italic}
@@ -179,7 +178,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .dash-tab:hover{color:var(--text2)}
 .dash-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .tab-pane{display:none}
-.tab-pane.active{display:flex;flex-direction:column}
+.tab-pane.active{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0}
 /* Compact inline trace strip inside each task */
 .task-trace-strip{display:flex;flex-wrap:wrap;gap:5px;padding:7px 0 2px}
 .task-trace-strip:empty{display:none}
@@ -188,7 +187,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .trace-pill.verify{color:var(--green);border-color:rgba(106,173,126,0.3)}
 .trace-pill.warn{color:var(--amber);border-color:rgba(212,137,58,0.3)}
 /* Agent Trace tab — full page */
-#tab-trace{overflow-y:auto;padding:20px;flex:1;min-height:0}
+#tab-trace{overflow-y:auto;padding:20px}
 .atrace-empty{font-size:13px;color:var(--text3);text-align:center;padding:60px 20px;line-height:1.8}
 .atrace-task{margin-bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .atrace-task-hdr{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:space-between}
@@ -521,7 +520,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <button class="dash-tab" id="dtab-trace" onclick="switchDashTab('trace')">Agent Trace</button>
   </div>
   <!-- CHECKLIST TAB -->
-  <div class="tab-pane active" id="tab-checklist" style="flex:1;overflow:hidden;min-height:0;display:flex;flex-direction:column">
+  <div class="tab-pane active" id="tab-checklist">
     <div class="legend">
       <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Do first</div>
       <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>Coming up</div>
