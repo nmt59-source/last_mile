@@ -981,14 +981,15 @@ async function draftFinLetter(tid,idx){
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
     const sig=document.getElementById('sig-inp')?.value||'[Executor Name]';
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'You are a compassionate estate specialist. Draft a professional estate notification letter. Use the exact names provided — do NOT use brackets for deceased or executor name. Use [brackets] only for unknown account details. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft estate notification letter.
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'You are helping an executor draft a letter to a financial institution. Write entirely from the executor\'s perspective — they are notifying the institution that the account holder has passed away. The letter is written BY the executor, addressed TO the institution. Open with "I am writing to notify you of the passing of..." Use the exact names provided. Do NOT use brackets for the deceased name or executor name. Use [brackets] only for unknown details. Ask the institution to flag the account as deceased, advise on estate claim procedures, and contact the executor with next steps. Sign off with the executor\'s name and their relationship to the deceased. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft estate notification letter.
 Institution: ${acc.institution}
 Account type: ${acc.type||'not specified'}
 Account last 4: ${acc.accountLast4?'ending in '+acc.accountLast4:'[unknown]'}
 Required form: ${info.form}
 Deceased full name: ${A.name||'[Deceased Name]'}
 State: ${A.state}
-Executor relationship: ${A.rel||'executor'}, signing as: ${sig}
+Executor relationship to deceased: ${A.rel||'executor'}
+Executor name (signing): ${sig}
 Date: ${today}
 Notes: ${taskNotes[tid]||'none'}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
@@ -1245,7 +1246,7 @@ async function bankStep3Draft(tid){
   const formCtx=window._taxAccounts?`\nAccounts identified from tax scan: ${window._taxAccounts}`:'';
   try{
     const sig=document.getElementById('sig-inp')?.value||A.executorName||'[Executor Name]';
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use the exact names provided. Do NOT use brackets for the deceased name or executor name. Use [brackets] only for unknown details like account numbers. Formal but kind. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft a bank estate notification letter.
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are helping an executor draft a letter to a financial institution. Write entirely from the executor\'s perspective — the executor is notifying the bank that their account holder has passed away. The letter is written BY the executor, addressed TO the bank. Open with "I am writing to notify you of the passing of..." Use the exact names provided. Do NOT use brackets for the deceased name or the executor name. Use [brackets] only for unknown details like full account numbers. Ask the bank to: note the account holder is deceased, freeze the account pending estate settlement, confirm the current balance, and advise on the process for estate claims. Sign off with the executor\'s name and their relationship to the deceased. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft a bank estate notification letter.
 Bank: ${info.name}
 Department: ${info.dept}
 Account type: ${getWF(tid).data.acctType||'not specified'}
@@ -1253,7 +1254,8 @@ Account last 4 digits: ${acctNum?'ending in '+acctNum:'[unknown — check statem
 Context: ${context||'none'}
 Deceased full name: ${A.name||'[Deceased Name]'}
 State: ${A.state}
-Executor relationship: ${A.rel||'executor'}, signing as: ${sig}
+Executor relationship to deceased: ${A.rel||'executor'}
+Executor name (signing): ${getWF(tid).data.sigName||sig}
 Date: ${today}
 Additional notes: ${taskNotes[tid]||'none'}${taxCtx}${formCtx}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();
@@ -1371,7 +1373,7 @@ async function draftStreamCancel(tid,svcName){
   addTrace(tid,'action','Draft','Preparing bereavement cancellation message for '+svcName);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'Draft a short, warm bereavement account cancellation message. 3 to 5 sentences. Suitable for email or chat support. No em dashes.',messages:[{role:'user',content:`Service: ${svcName}\nDeceased: ${A.name}\nExecutor: ${A.rel}\nDate: ${today}`}]})});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'You are helping an executor cancel a deceased person\'s subscription or digital account. Write a short message entirely from the executor\'s perspective — they are contacting the service to request account closure due to the account holder\'s passing. 3 to 5 sentences. Suitable for email or chat. First person. Do not use brackets for the deceased name. No em dashes.',messages:[{role:'user',content:`Service: ${svcName}\nDeceased full name: ${A.name||'the account holder'}\nExecutor relationship: ${A.rel||'executor'}\nExecutor name: ${document.getElementById('sig-inp')?.value||'[Executor Name]'}\nDate: ${today}`}]})});
     const d=await r.json();const txt=d.content[0].text;
     const el=document.getElementById(`sc-draft-${tid}-${svcName}`);
     if(el){el.textContent=txt;el.classList.remove('streaming');}
@@ -1438,7 +1440,7 @@ async function empStep1(tid){
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
     const sig=document.getElementById('sig-inp')?.value||'[Executor Name]';
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Use the exact names provided — do NOT use brackets for deceased or executor name. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nHR contact: ${getWF(tid).data.hrContact||'HR Department'}\nHR email/phone: ${getWF(tid).data.hrEmail||'not specified'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nState: ${A.state}\nExecutor relationship: ${A.rel||'executor'}, signing as: ${sig}\nDate: ${today}`}]})});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are helping an executor draft a letter to an employer\'s HR department. Write entirely from the executor\'s perspective — the executor is notifying the company that their employee has passed away. The letter is written BY the executor, addressed TO the HR department. Use "I am writing to inform you" not "we regret to inform you." Use the exact names provided. Include a subject line. Ask HR to: confirm the final paycheck, stop any future payroll, provide information on group life insurance, explain the 401(k) or pension beneficiary process, and notify dependents of COBRA continuation rights. Sign off with the executor\'s name. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nHR contact: ${getWF(tid).data.hrContact||'HR Department'}\nHR email/phone: ${getWF(tid).data.hrEmail||'not specified'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nState: ${A.state}\nExecutor relationship to deceased: ${A.rel||'executor'}\nExecutor name (signing): ${sig}\nDate: ${today}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     const el=document.getElementById('draft-stream-'+tid);
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;if(el)el.textContent=txt;}}catch(e){}}}
@@ -1558,7 +1560,7 @@ async function insStep1(tid){
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
     const sig=document.getElementById('sig-inp')?.value||'[Executor Name]';
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'Draft a professional life insurance death benefit claim letter. Use the exact names provided — do NOT use brackets for deceased or claimant name. Formal but warm. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Insurer: ${co}\nPolicy: ${pol||'[policy number — check policy documents]'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nBeneficiary or executor relationship: ${A.rel||'executor'}, signing as: ${sig}\nState: ${A.state}\nDate: ${today}`}]})});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'You are helping an executor or beneficiary draft a life insurance death benefit claim letter. Write entirely from the claimant\'s perspective — they are writing TO the insurance company to initiate a death claim. The letter is written BY the executor/beneficiary, addressed TO the insurer. Open with "I am writing to file a death benefit claim for policy holder..." Use the exact names provided. Do NOT use brackets for the deceased name or the claimant name. Use [brackets] only for unknown details like policy numbers. Ask the insurer to: confirm receipt, send the official claim form, advise on required documentation, and provide a timeline for processing. Sign off with the executor\'s name and their relationship. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Insurer: ${co}\nPolicy: ${pol||'[policy number — check policy documents]'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nBeneficiary or executor relationship to deceased: ${A.rel||'executor'}\nExecutor name (signing): ${sig}\nState: ${A.state}\nDate: ${today}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}}catch(e){}}}
     getWF(tid).draft=txt;setDraft(tid,txt);getWF(tid).draftStreaming=false;addTrace(tid,'verify','Claim letter ready','Reviewing for sensitive data.');setWFStep(tid,1);
@@ -1758,11 +1760,12 @@ async function draftGenericLetter(tid,institution,taskName){
   const taxCtx=window._taxParsed?`\nFinancial context from uploaded documents: ${window._taxParsed}`:'';
   const sig=document.getElementById('sig-inp')?.value||A.executorName||'[Executor Name]';
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a warm, professional notification letter. Use the exact names provided — do NOT use brackets for the deceased name or executor name, those are known. Use [brackets] only for unknown details like account numbers or addresses. Plain language. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Task: ${taskName}
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are helping an executor manage a deceased person\'s estate. Draft a formal letter written BY the executor, addressed TO the institution. Write entirely in first person from the executor\'s perspective. The executor is notifying the institution of the death and requesting appropriate action. Open with "I am writing to inform you of the passing of..." Use the exact names provided. Do NOT use brackets for the deceased name or executor name. Use [brackets] only for unknown details like account numbers or reference numbers. Close with the executor\'s full name, their relationship to the deceased, and the date. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Task: ${taskName}
 Institution: ${institution||taskName}
 Deceased full name: ${A.name||'[Deceased Name]'}
 State of residence: ${A.state||'[State]'}
-Executor / relationship: ${A.rel||'executor'}, signing as: ${sig}
+Executor relationship to deceased: ${A.rel||'executor'}
+Executor name (signing): ${sig}
 Date: ${today}
 Notes: ${taskNotes[tid]||'none'}${taxCtx}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
