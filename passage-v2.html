@@ -361,6 +361,12 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         2. <strong>VitalChek.com</strong> — official government service, arrives in 5 to 10 business days. <a href="https://www.vitalchek.com" target="_blank" style="color:var(--gold)">Visit VitalChek</a><br/>
         3. <strong>County vital records office</strong> — in person, same day. Bring photo ID and $10 to $25 per copy.
       </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div class="field-lbl" style="margin-bottom:6px">Date of death (optional — helps with deadlines)</div>
+        <input class="field-inp" id="date-of-death-inp" type="text" placeholder="e.g. March 1, 2025" style="margin-bottom:10px" oninput="A.dateOfDeath=this.value;trackerState.dateOfDeath=this.value;scheduleSave();"/>
+        <div class="field-lbl" style="margin-bottom:6px">County issuing certificate (optional)</div>
+        <input class="field-inp" id="death-county-inp" type="text" placeholder="County" oninput="A.deathCounty=this.value;scheduleSave();"/>
+      </div>
     </div>
 
     <div class="ucard primary">
@@ -399,6 +405,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
     <div>
       <div class="dash-title">Checklist for <em id="dname"></em></div>
       <div class="dash-meta" id="dmeta"></div>
+      <div style="margin-top:8px"><button type="button" class="skip-btn" onclick="go('s-tracker');renderTracker();" style="font-size:12px">Tracker — certificates & responses</button></div>
     </div>
     <div class="prog-row">
       <div class="prog-track"><div class="prog-inner" id="pfill"></div></div>
@@ -426,6 +433,53 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
   </div>
 </div>
 
+<!-- TRACKER -->
+<div id="s-tracker" class="screen">
+  <div class="upload-hdr">
+    <button type="button" class="skip-btn" onclick="go('s-dashboard')">← Back to checklist</button>
+    <h2 style="margin-top:14px;font-family:'Playfair Display',serif;font-weight:400">Tracker</h2>
+    <p style="color:var(--text2);font-size:13px;margin-top:4px">Certified copies, institution responses, and reminders. Saved in this browser.</p>
+  </div>
+  <div class="upload-body" style="max-width:640px">
+    <div class="dcard">
+      <div class="dcard-title">Death certificate copies</div>
+      <div class="dcard-hint">Track how many you ordered, have on hand, and have mailed.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+        <div><span class="field-lbl">Ordered</span><input type="number" min="0" class="field-inp" id="tr-ord" oninput="trUpd()"/></div>
+        <div><span class="field-lbl">On hand</span><input type="number" min="0" class="field-inp" id="tr-hand" oninput="trUpd()"/></div>
+        <div><span class="field-lbl">Mailed / sent</span><input type="number" min="0" class="field-inp" id="tr-mail" oninput="trUpd()"/></div>
+      </div>
+      <div style="margin-top:10px"><span class="field-lbl">Notes</span><input class="field-inp" id="tr-note" placeholder="Optional" oninput="trUpd()"/></div>
+    </div>
+    <div class="dcard">
+      <div class="dcard-title">Institution response log</div>
+      <div id="tr-resp-rows"></div>
+      <button type="button" class="sa-btn" style="margin-top:10px" onclick="trAddRow()">+ Add row</button>
+    </div>
+    <div class="dcard">
+      <div class="dcard-title">Deadline reminders</div>
+      <div id="tr-deadlines" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+      <button type="button" class="btn-gold" onclick="exportTrackerPdf()">Print / Save as PDF</button>
+      <button type="button" class="skip-btn" onclick="localStorage.removeItem(PASSAGE_LS_KEY);location.reload();" style="font-size:12px">Clear all saved data</button>
+    </div>
+  </div>
+</div>
+
+<!-- GROUND TRUTH MODAL -->
+<div id="gt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)gtClose()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;max-width:420px;width:100%;padding:22px" onclick="event.stopPropagation()">
+    <div style="font-family:'Playfair Display',serif;font-size:18px;margin-bottom:8px">Confirm details</div>
+    <p style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px">Verify these match your records before continuing. The letter should reflect the deceased name and state you entered at intake.</p>
+    <div id="gt-body" style="font-size:12px;line-height:1.8;margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="sa-btn" onclick="gtClose()">Edit draft first</button>
+      <button type="button" class="sa-btn primary" onclick="gtConfirm()">Looks correct</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHAT -->
 <button class="chat-fab" id="chat-fab" onclick="toggleChat()">💬</button>
 <div class="chat-panel" id="chat-panel">
@@ -446,11 +500,20 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 <script>
 // ── STATE ──
 const A={};
-let qIdx=0,tasks=[],selTask=null,draftTxt='';
+let qIdx=0,tasks=[],customTasks=[],selTask=null,draftTxt='';
 const taskDone={},taskNotes={},wfState={},vaultFiles={cert:[],bank:[]};
 let emailOk=false,simCode='';
 
 const STATES=['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming','Washington D.C.'];
+const API_BASE=(typeof window!=='undefined'&&window.PASSAGE_API_BASE!==undefined)?window.PASSAGE_API_BASE:'http://localhost:8787';
+function apiRoot(){return(API_BASE||'http://localhost:8787').replace(/\/$/,'');}
+function anthropicFetch(bodyObj){return fetch(apiRoot()+'/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},body:JSON.stringify(bodyObj)});}
+function orchestrateBankUrl(){return apiRoot()+'/api/orchestrate/bank-draft';}
+const PASSAGE_LS_KEY='passage_estate_v1';
+let trackerState={certOrdered:0,certOnHand:0,certMailed:0,certNote:'',responses:[],dateOfDeath:''};
+function savePassageState(){try{localStorage.setItem(PASSAGE_LS_KEY,JSON.stringify({A,tasks,customTasks,taskDone,taskNotes,wfState,vaultFiles,trackerState,qIdx,customTasksId:window._customTaskSeq||0}));}catch(e){console.warn('save state',e);}}
+function loadPassageState(){try{const raw=localStorage.getItem(PASSAGE_LS_KEY);if(!raw)return;const s=JSON.parse(raw);Object.assign(A,s.A||{});if(s.tasks&&s.tasks.length)tasks=s.tasks;if(s.customTasks&&s.customTasks.length)customTasks=s.customTasks;else customTasks=(tasks||[]).filter(t=>String(t.id).startsWith('custom-'));if(s.taskDone)Object.assign(taskDone,s.taskDone);if(s.taskNotes)Object.assign(taskNotes,s.taskNotes);if(s.wfState)Object.assign(wfState,s.wfState);if(s.vaultFiles)Object.assign(vaultFiles,s.vaultFiles);if(s.trackerState)Object.assign(trackerState,s.trackerState);if(typeof s.qIdx==='number')qIdx=s.qIdx;if(s.customTasksId)window._customTaskSeq=s.customTasksId;if(s.trackerState&&s.trackerState.dateOfDeath)trackerState.dateOfDeath=s.trackerState.dateOfDeath;}catch(e){console.warn('load state',e);}}
+function scheduleSave(){clearTimeout(window._saveT);window._saveT=setTimeout(savePassageState,400);}
 
 // ── INTAKE ──
 const Qs=[
@@ -462,6 +525,7 @@ const Qs=[
   {id:'digital',lbl:'Which online accounts or subscriptions did they have?',hint:'Select all that apply. Each has its own process.',type:'multi',opts:['Facebook / Instagram','Apple ID / iCloud','Google account','Netflix / Hulu / streaming','Amazon / Prime','LinkedIn','Email account (Gmail, Outlook)','Other subscriptions']},
   {id:'benefits',lbl:'Were they receiving any of these?',hint:'Helps identify notifications and what your family may be owed.',type:'multi',opts:['Social Security retirement or disability','Medicare or Medicaid','Veterans benefits (VA)','Pension from an employer','Workers compensation','None of the above']},
   {id:'survivors',lbl:'Who else may be affected?',hint:'Helps identify survivor benefits.',type:'multi',opts:['Spouse or domestic partner still living','Children under 18','Children with a disability (any age)','Dependent parents','Others named in a will or trust','No one else']},
+  {id:'discover',lbl:'Could any of these apply?',hint:'Account discovery — we fold these into your checklist.',type:'multi',opts:['Old employer retirement or pension not listed yet','Military, union, or veteran benefits','Safe deposit box or home safe','Storage rental','Oil, gas, or mineral royalties','None of these']},
   {id:'will',lbl:'Is there a will or estate plan?',hint:'Determines which legal steps are required.',type:'single',opts:['Yes, there is a will','Yes, there is a trust','Both a will and a trust','No will or trust known','Not sure yet']}
 ];
 
@@ -515,7 +579,18 @@ function delFile(type,idx){vaultFiles[type].splice(idx,1);refreshFiles(type);}
 
 // ── LOADING ──
 const loadMsgs=['Reviewing your responses…','Identifying government notifications…','Finding benefit entitlements…','Building your task list…','Preparing draft letters…'];
-function startLoad(){go('s-loading');const el=document.getElementById('lsteps');el.innerHTML=loadMsgs.map(s=>`<div class="ls"><div class="ls-dot"></div>${s}</div>`).join('');const steps=el.querySelectorAll('.ls');let i=0;(function tick(){if(i>0)steps[i-1].classList.remove('active');if(i<steps.length){steps[i].classList.add('active');i++;setTimeout(tick,750);}})();genTasks();}
+function startLoad(){
+  if(tasks.length&&A.name){
+    go('s-dashboard');
+    renderDash();
+    refreshFiles('cert');refreshFiles('bank');
+    scheduleSave();
+    return;
+  }
+  go('s-loading');
+  const el=document.getElementById('lsteps');el.innerHTML=loadMsgs.map(s=>`<div class="ls"><div class="ls-dot"></div>${s}</div>`).join('');const steps=el.querySelectorAll('.ls');let i=0;(function tick(){if(i>0)steps[i-1].classList.remove('active');if(i<steps.length){steps[i].classList.add('active');i++;setTimeout(tick,750);}})();
+  genTasks();
+}
 
 // ── TASK GENERATION ──
 async function genTasks(){
@@ -527,20 +602,24 @@ Debts: ${(A.debts||[]).join(', ')||'None stated'}
 Digital accounts: ${(A.digital||[]).join(', ')||'Unknown'}
 Benefits: ${(A.benefits||[]).join(', ')||'Unknown'}
 Surviving family: ${(A.survivors||[]).join(', ')||'None'}
+Discovery / extra contexts: ${(A.discover||[]).join(', ')||'None'}
 Will or trust: ${A.will||'Unknown'}`;
+  let apiList;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2500,system:`You are an expert estate administration specialist. Respond ONLY with a valid JSON array, no markdown.
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:2500,system:`You are an expert estate administration specialist. Respond ONLY with a valid JSON array, no markdown.
 Each task: {id, category, name, description, urgency, institution}
 category: one of "Government and Legal", "Financial Accounts", "Property and Insurance", "Digital and Subscriptions", "Notifications", "Survivor Benefits"
 urgency: "immediate"|"soon"|"later"
 Keep tasks HIGH LEVEL — one per institution type. Do NOT create a "Will and Estate Plan" category. Fold will tasks (secure will, file probate, notify beneficiaries) into "Government and Legal".
 Include survivor benefits, SSA notifications, VA if veteran, all financial types from intake, final tax return.
-Generate 18 to 26 carefully tailored tasks. No em dashes.`,messages:[{role:'user',content:p}]})});
+Generate 18 to 26 carefully tailored tasks. No em dashes.`,messages:[{role:'user',content:p}]});
     const d=await r.json();const txt=d.content[0].text;
-    try{tasks=JSON.parse(txt);}catch(e){const m=txt.match(/\[[\s\S]*\]/);tasks=m?JSON.parse(m[0]):fallback();}
-  }catch(e){tasks=fallback();}
+    try{apiList=JSON.parse(txt);}catch(e){const m=txt.match(/\[[\s\S]*\]/);apiList=m?JSON.parse(m[0]):fallback();}
+  }catch(e){apiList=fallback();}
+  tasks=apiList.concat(customTasks);
   tasks.forEach(t=>{if(taskDone[t.id]===undefined)taskDone[t.id]=false;});
   setTimeout(renderDash,500);
+  scheduleSave();
 }
 
 // ── PROBATE NECESSITY LOGIC ──
@@ -629,17 +708,36 @@ function renderDash(){
         const isDone=taskDone[t.id];
         const urgCls=t.urgency==='immediate'?'now':t.urgency==='soon'?'soon':'later';
         const urgLabel=t.urgency==='immediate'?'Do first':t.urgency==='soon'?'Soon':'Later';
+        const dh=depHintFor(t);
         return `<div class="ti${selTask&&selTask.id===t.id?' sel':''}" id="ti${t.id}" onclick="selT('${t.id}')">
           <div class="ti-chk${isDone?' done':''}" id="chk${t.id}" onclick="event.stopPropagation();togDone('${t.id}')">${isDone?'✓':''}</div>
           <div class="ti-body">
             <div class="ti-name${isDone?' done':''}">${t.name}</div>
-            <div class="ti-sub">${t.institution||''}</div>
+            <div class="ti-sub">${t.institution||''}${dh?' · <span style="color:var(--amber)">'+dh+'</span>':''}</div>
           </div>
           <div class="urg ${urgCls}">${urgLabel}</div>
         </div>`;}).join('')}</div>
-    </div>`).join('');
+    </div>`).join('')+`<div style="padding:12px 18px 18px;border-top:1px solid var(--border)"><button type="button" class="sa-btn" onclick="addCustomTask()">+ Add custom task</button></div>`;
 }
-function togDone(id){taskDone[id]=!taskDone[id];const chk=document.getElementById('chk'+id),nm=document.getElementById('ti'+id)?.querySelector('.ti-name');if(chk){chk.classList.toggle('done',taskDone[id]);chk.textContent=taskDone[id]?'✓':'';}if(nm)nm.classList.toggle('done',taskDone[id]);updProg();if(selTask&&selTask.id===id)renderWorkflow(selTask);}
+function depHintFor(t){
+  const n=(t.name||'').toLowerCase();
+  const certTask=tasks.find(x=>(x.name||'').toLowerCase().includes('death cert'));
+  const certOk=!certTask||taskDone[certTask.id];
+  if(!certOk&&(n.includes('bank')||n.includes('financial')||n.includes('freeze')))return 'Tip: death certificates first';
+  return '';
+}
+function addCustomTask(){
+  const name=prompt('Name for this task');if(!name||!name.trim())return;
+  window._customTaskSeq=(window._customTaskSeq||0)+1;
+  const id='custom-'+window._customTaskSeq;
+  const o={id,category:'Custom',name:name.trim(),description:'Custom task',urgency:'soon',institution:''};
+  customTasks.push(o);
+  tasks.push(o);
+  taskDone[id]=false;
+  renderDash();
+  scheduleSave();
+}
+function togDone(id){taskDone[id]=!taskDone[id];const chk=document.getElementById('chk'+id),nm=document.getElementById('ti'+id)?.querySelector('.ti-name');if(chk){chk.classList.toggle('done',taskDone[id]);chk.textContent=taskDone[id]?'✓':'';}if(nm)nm.classList.toggle('done',taskDone[id]);updProg();if(selTask&&selTask.id===id)renderWorkflow(selTask);scheduleSave();}
 function updProg(){const total=tasks.length,comp=tasks.filter(t=>taskDone[t.id]).length;const p=total?Math.round(comp/total*100):0;document.getElementById('pfill').style.width=p+'%';document.getElementById('plbl').textContent=`${comp} of ${total} complete`;}
 function selT(id){selTask=tasks.find(t=>t.id===id);document.querySelectorAll('.ti').forEach(el=>el.classList.remove('sel'));const el=document.getElementById('ti'+id);if(el)el.classList.add('sel');renderWorkflow(selTask);updateChatContext(selTask);}
 
@@ -708,7 +806,7 @@ function renderWorkflow(t){
     ${isDone?`<div class="done-banner"><div class="done-banner-title">✓ Task complete</div><div class="done-banner-sub">You can always reopen this task to edit notes or redraft the letter.</div></div>`:''}
     <div>
       <div class="slbl" style="margin-bottom:5px">Your notes</div>
-      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden"><textarea style="width:100%;background:transparent;border:none;padding:10px 12px;color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:56px;line-height:1.6;::placeholder{color:var(--text3)}" placeholder="Notes, account numbers, context…" oninput="taskNotes['${t.id}']=this.value">${taskNotes[t.id]||''}</textarea></div>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden"><textarea style="width:100%;background:transparent;border:none;padding:10px 12px;color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:56px;line-height:1.6;::placeholder{color:var(--text3)}" placeholder="Notes, account numbers, context…" oninput="taskNotes['${t.id}']=this.value;scheduleSave();">${taskNotes[t.id]||''}</textarea></div>
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn-gold" style="flex:1;font-size:13px;padding:10px" onclick="togDone('${t.id}')">${isDone?'Mark as not done':'Mark as complete'}</button>
@@ -828,9 +926,11 @@ function bankWorkflow(t,wf){
       <div class="step-card-body">
         ${wf.draftStreaming?`<div class="draft-box streaming" id="draft-stream-${t.id}"></div>`:draft?`<div class="draft-box" id="draft-box-${t.id}">${draft}</div>`:'<div style="font-size:12px;color:var(--text3)">Generating…</div>'}
         ${step===3&&draft&&!wf.draftStreaming?`<div class="step-actions">
-          <button class="sa-btn primary" onclick="bankStep4Review('${t.id}')">This looks good — continue</button>
+          <label style="font-size:11px;color:var(--text2);display:flex;gap:6px;align-items:center;width:100%;margin-bottom:4px"><input type="checkbox" id="email-mode-${t.id}" onchange="window._bankEmailMode=this.checked"/> Format copy as email (To / Subject / body)</label>
+          <button class="sa-btn primary" onclick="bankStepGtOpen('${t.id}')">This looks good — continue</button>
           <button class="sa-btn" onclick="redraftBank('${t.id}')">Redraft</button>
           <button class="sa-btn" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy letter</button>
+          <button class="sa-btn" onclick="downloadDraftTxt('${t.id}')">Download .txt</button>
         </div>`:''}
       </div>
     </div>`;
@@ -881,9 +981,91 @@ function bankWorkflow(t,wf){
 const draftStore={};
 function setDraft(tid,txt){draftStore[tid]=txt;}
 function getDraft(tid){return draftStore[tid]||'';}
-function copyDraftFor(tid){
-  const txt=getDraft(tid)||getWF(tid).draft||'';
+function bankStepGtOpen(tid){
+  const draft=getDraft(tid)||getWF(tid).draft||'';
+  const first=(A.name||'').split(/\s+/)[0]||'';
+  const nameLikely=!first||!draft||draft.toLowerCase().includes(first.toLowerCase());
+  const html=`<div><strong>Deceased (intake):</strong> ${A.name||'—'}</div><div><strong>State:</strong> ${A.state||'—'}</div><div><strong>Your role:</strong> ${A.rel||'—'}</div>${nameLikely?'':'<p style="color:var(--amber);margin-top:10px">The draft may not include the deceased name as you entered it. Review the letter text carefully.</p>'}`;
+  document.getElementById('gt-body').innerHTML=html;
+  document.getElementById('gt-modal').style.display='flex';
+  window._gtTid=tid;
+}
+function gtClose(){document.getElementById('gt-modal').style.display='none';window._gtTid=null;}
+function gtConfirm(){const tid=window._gtTid;gtClose();if(tid)bankStep4Review(tid);}
+function renderTracker(){
+  const o=document.getElementById('tr-ord'),h=document.getElementById('tr-hand'),m=document.getElementById('tr-mail'),n=document.getElementById('tr-note');
+  if(o)o.value=trackerState.certOrdered||0;
+  if(h)h.value=trackerState.certOnHand||0;
+  if(m)m.value=trackerState.certMailed||0;
+  if(n)n.value=trackerState.certNote||'';
+  trRenderRows();
+  trDeadlines();
+}
+function trUpd(){
+  trackerState.certOrdered=Number(document.getElementById('tr-ord')?.value)||0;
+  trackerState.certOnHand=Number(document.getElementById('tr-hand')?.value)||0;
+  trackerState.certMailed=Number(document.getElementById('tr-mail')?.value)||0;
+  trackerState.certNote=document.getElementById('tr-note')?.value||'';
+  scheduleSave();
+  trDeadlines();
+}
+function trRenderRows(){
+  const el=document.getElementById('tr-resp-rows');
+  if(!el)return;
+  if(!trackerState.responses)trackerState.responses=[];
+  el.innerHTML=trackerState.responses.map((r,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+    <input class="field-inp" placeholder="Institution" value="${(r.institution||'').replace(/"/g,'&quot;')}" oninput="trRow(${i},'institution',this.value)"/>
+    <input class="field-inp" placeholder="Sent date" value="${(r.sentDate||'').replace(/"/g,'&quot;')}" oninput="trRow(${i},'sentDate',this.value)"/>
+    <input class="field-inp" placeholder="Channel (email, mail…)" value="${(r.channel||'').replace(/"/g,'&quot;')}" oninput="trRow(${i},'channel',this.value)"/>
+    <select class="field-inp" onchange="trRow(${i},'response',this.value)">
+      <option value="pending" ${r.response==='pending'?'selected':''}>Pending</option>
+      <option value="yes" ${r.response==='yes'?'selected':''}>Response received</option>
+      <option value="no" ${r.response==='no'?'selected':''}>No response yet</option>
+    </select>
+  </div>`).join('')||'<div style="font-size:12px;color:var(--text3)">No rows yet.</div>';
+}
+function trRow(i,k,v){if(!trackerState.responses[i])return;trackerState.responses[i][k]=v;scheduleSave();}
+function trAddRow(){if(!trackerState.responses)trackerState.responses=[];trackerState.responses.push({institution:'',sentDate:'',channel:'',response:'pending'});trRenderRows();scheduleSave();}
+function trDeadlines(){
+  const el=document.getElementById('tr-deadlines');
+  if(!el)return;
+  const lines=[];
+  if(A.dateOfDeath||trackerState.dateOfDeath)lines.push('Return SSA payments after date of death as instructed (often within 60 days).','Employer COBRA election: often within 60 days.');
+  else lines.push('Add date of death under document upload for SSA and COBRA deadline hints.');
+  el.innerHTML=lines.map(l=>`<div style="margin-bottom:6px">› ${l}</div>`).join('');
+}
+function exportTrackerPdf(){
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Passage tracker</title></head><body style="font-family:system-ui,sans-serif;padding:24px;line-height:1.5"><h1>Passage tracker</h1><h2>Certified copies</h2><p>Ordered: ${trackerState.certOrdered||0}, on hand: ${trackerState.certOnHand||0}, mailed: ${trackerState.certMailed||0}</p><p>${trackerState.certNote||''}</p><h2>Institution log</h2><pre style="white-space:pre-wrap">${JSON.stringify(trackerState.responses||[],null,2)}</pre></body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+function downloadDraftTxt(tid){
+  let txt=getDraft(tid)||getWF(tid).draft||'';
   if(!txt)return;
+  const em=document.getElementById('email-mode-'+tid);
+  const wf=getWF(tid);
+  if(em&&em.checked&&wf.data&&wf.data.bankName){
+    const info=findBankContact(wf.data.bankName);
+    txt=`To: ${info.dept} — ${info.name}\nSubject: Estate Notification — ${A.name||'[Name]'} — Account Holder Deceased\n\n${txt}`;
+  }
+  const blob=new Blob([txt],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='passage-letter.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function copyDraftFor(tid){
+  let txt=getDraft(tid)||getWF(tid).draft||'';
+  if(!txt)return;
+  const em=document.getElementById('email-mode-'+tid);
+  const wf=getWF(tid);
+  if(em&&em.checked&&wf.data&&wf.data.bankName){
+    const info=findBankContact(wf.data.bankName);
+    txt=`To: ${info.dept} — ${info.name}\nSubject: Estate Notification — ${A.name||'[Name]'} — Account Holder Deceased\n\n${txt}`;
+  }
   navigator.clipboard.writeText(txt).then(()=>{
     const btns=document.querySelectorAll(`[data-copy-tid="${tid}"]`);
     btns.forEach(b=>{const orig=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=orig,2000);});
@@ -897,7 +1079,7 @@ function bankStep2Confirm(tid){addTrace(tid,'verify','Verified','Contact informa
 async function parseTaxFile(fileContent,fileName){
   addTrace('global','action','Tax scan','Scanning uploaded document for financial accounts…');
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are an estate specialist analyzing a tax return or bank statement. Extract all financial institutions, account types, and any relevant identifiers. Format as a clear list. Be concise. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`File: ${fileName}\nEstate context: Deceased is ${A.name||'unknown'}, state ${A.state||'unknown'}.\n\nBased on a typical tax return or bank statement for this person, list the likely financial institutions and account types that would appear. Include:\n- Banks and credit unions (with account types)\n- Investment accounts (401k, IRA, brokerage)\n- Life insurance premium payers\n- Pension or annuity sources\n- Any employer names visible\n\nFormat as a simple bulleted list.`}]})});
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are an estate specialist analyzing a tax return or bank statement. Extract all financial institutions, account types, and any relevant identifiers. Format as a clear list. Be concise. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`File: ${fileName}\nEstate context: Deceased is ${A.name||'unknown'}, state ${A.state||'unknown'}.\n\nBased on a typical tax return or bank statement for this person, list the likely financial institutions and account types that would appear. Include:\n- Banks and credit unions (with account types)\n- Investment accounts (401k, IRA, brokerage)\n- Life insurance premium payers\n- Pension or annuity sources\n- Any employer names visible\n\nFormat as a simple bulleted list.`}]});
     const d=await r.json();
     const result=d.content?.[0]?.text||'';
     window._taxParsed=result;
@@ -932,16 +1114,48 @@ async function bankStep3Draft(tid){
   addTrace(tid,'step','Step 3','Drafting notification letter for '+getWF(tid).data.bankName);
   getWF(tid).draftStreaming=true;
   getWF(tid).draft='';
-  // Render first so the streaming element exists in the DOM
   setWFStep(tid,3);
-  // Small tick to let DOM update
   await delay(60);
-  const info=findBankContact(getWF(tid).data.bankName);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   const taxCtx=window._taxParsed?`\nFinancial context from uploaded tax documents: ${window._taxParsed}`:'';
   const formCtx=window._taxAccounts?`\nAccounts identified from tax scan: ${window._taxAccounts}`:'';
+  const payload={bankName:getWF(tid).data.bankName,acctType:getWF(tid).data.acctType||'',acctNum,context,notes:taskNotes[tid]||'',taxContext:taxCtx,formContext:formCtx,information:{deceasedName:A.name||'',executorRelationship:A.rel||'',state:A.state||''}};
+  let txt='';
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft a bank estate notification letter.
+    const r=await fetch(orchestrateBankUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok||!r.body)throw new Error('orchestrate HTTP '+r.status);
+    const reader=r.body.getReader(),dec=new TextDecoder();
+    let buf='';
+    while(true){
+      const{done:d,value}=await reader.read();if(d)break;
+      buf+=dec.decode(value,{stream:true});
+      let sep;
+      while((sep=buf.indexOf('\n\n'))>=0){
+        const chunk=buf.slice(0,sep);buf=buf.slice(sep+2);
+        const line=chunk.split('\n').find(l=>l.startsWith('data: '));if(!line)continue;
+        try{
+          const ev=JSON.parse(line.slice(6));
+          if(ev.type==='trace')addTrace(tid,ev.traceType,ev.label,ev.text);
+          if(ev.type==='draft_delta'){txt+=ev.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}
+          if(ev.type==='done'&&ev.fullDraft)txt=ev.fullDraft;
+        }catch(_){/* ignore */}
+      }
+    }
+    getWF(tid).draft=txt;
+    setDraft(tid,txt);
+    getWF(tid).draftStreaming=false;
+    if(!txt.trim())throw new Error('empty draft');
+    setWFStep(tid,3);
+    scheduleSave();
+  }catch(e){
+    console.warn('Orchestrator unavailable, using proxy stream',e);
+    await bankStep3DraftDirect(tid,acctNum,context,today,taxCtx,formCtx);
+  }
+}
+async function bankStep3DraftDirect(tid,acctNum,context,today,taxCtx,formCtx){
+  const info=findBankContact(getWF(tid).data.bankName);
+  try{
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft a bank estate notification letter.
 Bank: ${info.name}
 Department: ${info.dept}
 Account type: ${getWF(tid).data.acctType||'not specified'}
@@ -951,7 +1165,7 @@ Deceased: ${A.name}
 State: ${A.state}
 Executor: ${A.rel}
 Date: ${today}
-Additional notes: ${taskNotes[tid]||'none'}${taxCtx}${formCtx}`}]})});
+Additional notes: ${taskNotes[tid]||'none'}${taxCtx}${formCtx}`}]});
     const reader=r.body.getReader(),dec=new TextDecoder();
     let txt='';
     while(true){
@@ -959,18 +1173,20 @@ Additional notes: ${taskNotes[tid]||'none'}${taxCtx}${formCtx}`}]})});
       for(const line of dec.decode(value).split('\n')){
         if(!line.startsWith('data: '))continue;
         const raw=line.slice(6);if(raw==='[DONE]')continue;
-        try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}}catch(e){}
+        try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}}catch(_){}
       }
     }
     getWF(tid).draft=txt;
     setDraft(tid,txt);
     getWF(tid).draftStreaming=false;
-    addTrace(tid,'action','Draft complete','Letter drafted. Checking for sensitive data.');
+    addTrace(tid,'action','Communication agent','Draft complete (direct proxy).');
+    addTrace(tid,'verify','Verify agent','Review draft locally before sending.');
     setWFStep(tid,3);
-  }catch(e){
-    console.error('bankStep3Draft error:',e);
+    scheduleSave();
+  }catch(err){
+    console.error('bankStep3Draft error:',err);
     getWF(tid).draftStreaming=false;
-    getWF(tid).draft='Error generating letter. Please try again.';
+    getWF(tid).draft='Error generating letter. Start the API server (see server/README) or check ANTHROPIC_API_KEY.';
     setWFStep(tid,3);
   }
 }
@@ -996,7 +1212,7 @@ async function bankStep1Find(tid){
   getWF(tid).data.acctType=acctType;
   addTrace(tid,'step','Step 1','Looking up estate services contact for '+bankName+'…');
   await delay(500);
-  addTrace(tid,'action','Search','Querying financial institution contact database');
+  addTrace(tid,'action','Search agent','Querying knowledge repository for estate services contact');
   await delay(300);
   const info=findBankContact(bankName);
   addTrace(tid,'verify','Contact found',info.name+' — '+info.dept+' — '+info.phone);
@@ -1067,7 +1283,7 @@ async function draftStreamCancel(tid,svcName){
   addTrace(tid,'action','Draft','Preparing bereavement cancellation message for '+svcName);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'Draft a short, warm bereavement account cancellation message. 3 to 5 sentences. Suitable for email or chat support. No em dashes.',messages:[{role:'user',content:`Service: ${svcName}\nDeceased: ${A.name}\nExecutor: ${A.rel}\nDate: ${today}`}]})});
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:300,system:'Draft a short, warm bereavement account cancellation message. 3 to 5 sentences. Suitable for email or chat support. No em dashes.',messages:[{role:'user',content:`Service: ${svcName}\nDeceased: ${A.name}\nExecutor: ${A.rel}\nDate: ${today}`}]});
     const d=await r.json();const txt=d.content[0].text;
     const el=document.getElementById(`sc-draft-${tid}-${svcName}`);
     if(el){el.textContent=txt;el.classList.remove('streaming');}
@@ -1128,7 +1344,7 @@ async function empStep1(tid){
   await delay(60);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. Use [brackets] for unknowns. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor: ${A.rel}\nDate: ${today}`}]})});
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. Use [brackets] for unknowns. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor: ${A.rel}\nDate: ${today}`}]});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     const el=document.getElementById('draft-stream-'+tid);
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;if(el)el.textContent=txt;}}catch(e){}}}
@@ -1219,7 +1435,7 @@ async function insStep1(tid){
   await delay(60);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'Draft a professional life insurance death benefit claim letter. Formal but warm. Use [brackets] for unknowns. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Insurer: ${co}\nPolicy: ${pol||'unknown'}\nDeceased: ${A.name}\nBeneficiary or executor: ${A.rel}\nState: ${A.state}\nDate: ${today}`}]})});
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'Draft a professional life insurance death benefit claim letter. Formal but warm. Use [brackets] for unknowns. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Insurer: ${co}\nPolicy: ${pol||'unknown'}\nDeceased: ${A.name}\nBeneficiary or executor: ${A.rel}\nState: ${A.state}\nDate: ${today}`}]});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}}catch(e){}}}
     getWF(tid).draft=txt;setDraft(tid,txt);getWF(tid).draftStreaming=false;addTrace(tid,'verify','Claim letter ready','Reviewing for sensitive data.');setWFStep(tid,1);
@@ -1250,7 +1466,7 @@ async function draftGenericLetter(tid,institution,taskName){
   // pull tax context if available
   const taxCtx=window._taxParsed?`\nFinancial context from uploaded documents: ${window._taxParsed}`:'';
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a warm, professional notification letter. Plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Task: ${taskName}\nInstitution: ${institution||taskName}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor relationship: ${A.rel}\nDate: ${today}\nNotes: ${taskNotes[tid]||'none'}${taxCtx}`}]})});
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a warm, professional notification letter. Plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Task: ${taskName}\nInstitution: ${institution||taskName}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor relationship: ${A.rel}\nDate: ${today}\nNotes: ${taskNotes[tid]||'none'}${taxCtx}`}]});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     while(true){
       const{done:d,value}=await reader.read();if(d)break;
@@ -1265,6 +1481,7 @@ async function draftGenericLetter(tid,institution,taskName){
     const act=document.getElementById('gen-actions-'+tid);
     if(act)act.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
       <button class="sa-btn primary" data-copy-tid="${tid}" onclick="copyDraftFor('${tid}')">Copy letter</button>
+      <button class="sa-btn" onclick="downloadDraftTxt('${tid}')">Download .txt</button>
       <button class="sa-btn" onclick="draftGenericLetter('${tid}','${(institution||'').replace(/'/g,"\\'")}','${(taskName||'').replace(/'/g,"\\'")}')" style="border-color:var(--border2)">Redraft</button>
       <button class="sa-btn" onclick="togDone('${tid}')">Mark complete</button>
     </div>`;
@@ -1300,7 +1517,7 @@ async function loadLawyerRecs(tid,state,isOutOfState){
   if(!el)return;
   addTrace(tid,'action','Referral search','Finding estate attorneys and CPAs in '+state);
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,system:'You are an estate planning specialist. Provide verified, specific referral resources for estate attorneys and CPAs. Be factual and practical. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`State: ${state}
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:500,system:'You are an estate planning specialist. Provide verified, specific referral resources for estate attorneys and CPAs. Be factual and practical. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`State: ${state}
 Situation: Estate administration after a death. ${isOutOfState?'May involve out-of-state real property (ancillary probate).':''}
 
 Provide:
@@ -1309,7 +1526,7 @@ Provide:
 3. One free or low-cost legal aid resource for ${state} with website
 4. 2 to 3 practical tips for what to ask an estate attorney in ${state} specifically (mention any state-specific rules if relevant)
 
-Format as JSON: {"bar":{"name":"...","url":"...","note":"..."},"cpa":{"name":"...","url":"...","note":"..."},"legal_aid":{"name":"...","url":"..."},"tips":["...","..."]}`}]})});
+Format as JSON: {"bar":{"name":"...","url":"...","note":"..."},"cpa":{"name":"...","url":"...","note":"..."},"legal_aid":{"name":"...","url":"..."},"tips":["...","..."]}`}]});
     const d=await r.json();
     let txt=d.content?.[0]?.text||'';
     // strip markdown fences
@@ -1381,7 +1598,7 @@ function delay(ms){return new Promise(r=>setTimeout(r,ms));}
 
 // ── CHAT — context-aware ──
 let chatHistory=[],chatOpen=false,chatStreaming=false,chatTaskCtx=null;
-const GUARDRAIL_PATTERNS=['more money','get more','maximize inheritance','hide assets','cheat','how much can i get','take more','claim more than'];
+const GUARDRAIL_PATTERNS=['more money','get more','maximize inheritance','hide assets','cheat','how much can i get','take more','claim more than','get more from the will','more from the will','contest the will','disinherit'];
 function updateChatContext(t){
   chatTaskCtx=t;
   const bar=document.getElementById('chat-ctx-bar');
@@ -1428,7 +1645,7 @@ async function sendChat(){
   const taskCtx=chatTaskCtx?`Current task: "${chatTaskCtx.name}" (${chatTaskCtx.institution||chatTaskCtx.category}).`:'';
   const ctx=`Estate: ${A.name||'unknown'}, ${A.rel||'unknown'}, ${A.state||'unknown'}. Assets: ${(A.assets||[]).join(', ')||'unknown'}. Benefits: ${(A.benefits||[]).join(', ')||'unknown'}. Survivors: ${(A.survivors||[]).join(', ')||'none'}. ${taskCtx}`;
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,stream:true,system:`You are a compassionate estate specialist. Warm, clear, brief. 2 to 4 sentences unless more is needed. If someone is currently working on a task, answer in the context of that task specifically. Do not use em dashes. Do not mention artificial intelligence. ${ctx}`,messages:chatHistory})});
+    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:400,stream:true,system:`You are a compassionate estate specialist. Warm, clear, brief. 2 to 4 sentences unless more is needed. If someone is currently working on a task, answer in the context of that task specifically. Do not use em dashes. Do not mention artificial intelligence. ${ctx}`,messages:chatHistory});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;aEl.textContent=txt;msgs.scrollTop=msgs.scrollHeight;}}catch(e){}}}
     aEl.classList.remove('streaming');chatHistory.push({role:'assistant',content:txt});
@@ -1452,6 +1669,17 @@ function fallback(){return[
   {id:'f11',category:'Survivor Benefits',name:'Apply for Social Security survivor benefits',description:'A surviving spouse and children under 18 may qualify for monthly payments. A one-time $255 payment may also be available.',urgency:'soon',institution:'Social Security Administration'},
   {id:'f12',category:'Survivor Benefits',name:'Claim employer group life insurance and COBRA',description:'Contact HR for group life insurance and ensure dependents can elect COBRA health coverage within 60 days.',urgency:'immediate',institution:'Employer HR'},
 ];}
+document.addEventListener('DOMContentLoaded',function(){
+  loadPassageState();
+  if(A.dateOfDeath){const e=document.getElementById('date-of-death-inp');if(e)e.value=A.dateOfDeath;trackerState.dateOfDeath=A.dateOfDeath;}
+  if(A.deathCounty){const e=document.getElementById('death-county-inp');if(e)e.value=A.deathCounty;}
+  if(tasks.length&&A.name){
+    go('s-dashboard');
+    renderDash();
+    refreshFiles('cert');
+    refreshFiles('bank');
+  }
+});
 </script>
 </body>
 </html>

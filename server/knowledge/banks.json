@@ -1,0 +1,57 @@
+{
+  "chase": {
+    "name": "JPMorgan Chase",
+    "dept": "Chase Estate Services",
+    "phone": "1-888-269-8690",
+    "hours": "Mon–Fri 9am–5pm ET",
+    "address": "Chase Bank Estate Services\nPO Box 659754, San Antonio TX 78265",
+    "web": "chase.com/estate-services",
+    "form": "Death notification form (online or in branch)",
+    "certReq": "1 certified copy (returned to you).",
+    "note": "You can also visit any branch with the death certificate and executor documentation."
+  },
+  "bank of america": {
+    "name": "Bank of America",
+    "dept": "Estate Servicing Department",
+    "phone": "1-888-689-4357",
+    "hours": "Mon–Fri 8am–8pm ET",
+    "address": "Estate Servicing\nPO Box 982235, El Paso TX 79998",
+    "web": "bankofamerica.com/deposits/manage/estate-services",
+    "form": "Notification of Death form",
+    "certReq": "1 certified copy.",
+    "note": ""
+  },
+  "wells fargo": {
+    "name": "Wells Fargo",
+    "dept": "Estate Care Center",
+    "phone": "1-800-869-3557",
+    "hours": "Mon–Fri 8am–5pm ET",
+    "address": "Wells Fargo Estate Services\nPO Box 10306, Des Moines IA 50306",
+    "web": "wellsfargo.com/financial-education/life-events/deceased-account-holder",
+    "form": "Estate Settlement Request",
+    "certReq": "1 certified copy.",
+    "note": ""
+  },
+  "citibank": {
+    "name": "Citibank",
+    "dept": "Estate Unit",
+    "phone": "1-888-248-4226",
+    "hours": "Mon–Fri 9am–5pm ET",
+    "address": "Citi Estate Unit\nPO Box 769006, San Antonio TX 78245",
+    "web": "citi.com",
+    "form": "Written notification with death certificate",
+    "certReq": "1 certified copy.",
+    "note": ""
+  },
+  "default": {
+    "name": "Financial Institution",
+    "dept": "Estate Services Department",
+    "phone": "See account statements",
+    "hours": "Business hours",
+    "address": "Mail to Estate Services at the address on your statement",
+    "web": "Search institution name + estate services",
+    "form": "Written notification with death certificate",
+    "certReq": "1 certified copy.",
+    "note": "Ask to speak with the Estate Services or Bereavement team when you call."
+  }
+}
