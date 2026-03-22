@@ -12,35 +12,99 @@ function addTrace(tid, type, label, text, href, ruleRef) {
 }
 
 function renderTrace(tid) {
-  const el = document.getElementById('tcoltrace');
+  _renderInlineStrip(tid);
+  _renderTraceTab();
+}
+
+// Compact pill strip rendered inside the task's workflow panel.
+// Shows only step labels — no detail text, no hrefs, no rule refs.
+function _renderInlineStrip(tid) {
+  const el = document.getElementById('task-trace-' + tid);
   if (!el) return;
-  const events = (traceEvents[tid] || []).concat(traceEvents['global'] || []);
-  if (!events.length) {
-    el.innerHTML = '<div class="trace-title">What\'s happening</div><div class="trace-empty">As you work through each task, we\'ll show you what steps are being taken and why.</div>';
+  const events = (traceEvents[tid] || []);
+  if (!events.length) { el.innerHTML = ''; return; }
+  el.innerHTML = events.map(e => {
+    const icon = e.type === 'verify' ? '✓' : e.type === 'warn' ? '⚠' : '›';
+    return `<span class="trace-pill ${e.type}">${icon} ${e.label}</span>`;
+  }).join('');
+}
+
+// Full grouped view in the Agent Trace tab — all fields, citation chips, rule refs.
+function _renderTraceTab() {
+  const container = document.getElementById('tab-trace-content');
+  if (!container) return;
+
+  const allTids = Object.keys(traceEvents).filter(id => id !== 'global' && traceEvents[id].length);
+  const globalEvents = traceEvents['global'] || [];
+
+  if (!allTids.length && !globalEvents.length) {
+    container.innerHTML = '<div class="atrace-empty">Agent trace will appear here as you work through tasks.<br/>Each step the AI takes — including sources and legal references — is recorded here.</div>';
     return;
   }
+
   const uid = () => Math.random().toString(36).slice(2, 8);
-  el.innerHTML = '<div class="trace-title">What\'s happening</div>' + events.map(e => {
-    const srcLink = e.href
-      ? ` <a href="${e.href.startsWith('http') ? e.href : 'https://' + e.href}" target="_blank" rel="noopener" style="color:var(--blue);font-size:10px;text-decoration:none;white-space:nowrap;margin-left:4px">↗ more info</a>`
-      : '';
-    // Rule references are collapsed behind a toggle — users don't need to see legal codes inline
-    const ruleId = uid();
-    const ruleTag = e.ruleRef
-      ? `<div style="margin-top:3px">
-           <button class="acc-toggle" style="padding:2px 0;font-size:9px" onclick="var b=document.getElementById('rule-${ruleId}');b.classList.toggle('open');this.querySelector('.acc-arrow').style.transform=b.classList.contains('open')?'rotate(90deg)':''">
-             <span>Legal reference</span><span class="acc-arrow">›</span>
-           </button>
-           <div id="rule-${ruleId}" class="acc-body" style="font-size:9px;color:var(--text3);font-style:italic;line-height:1.5">${e.ruleRef}</div>
-         </div>`
-      : '';
-    return `<div class="trace-event ${e.type}">
-      <div class="trace-label">${e.label}<span style="font-size:9px;color:var(--text3);font-weight:400;margin-left:6px">${e.ts}</span></div>
-      <div class="trace-text">${e.text}${srcLink}</div>
-      ${ruleTag}
+
+  function renderEventList(events) {
+    return events.map(e => {
+      const citeHtml = e.href
+        ? `<div class="atrace-cite"><a href="${e.href.startsWith('http') ? e.href : 'https://' + e.href}" target="_blank" rel="noopener" class="src-chip" style="font-size:10px">↗ ${e.href.replace(/^https?:\/\//, '').split('/')[0]}</a></div>`
+        : '';
+      const ruleId = uid();
+      const ruleHtml = e.ruleRef
+        ? `<div style="margin-top:3px">
+             <button class="acc-toggle" style="padding:2px 0;font-size:9px" onclick="var b=document.getElementById('arule-${ruleId}');b.classList.toggle('open');this.querySelector('.acc-arrow').style.transform=b.classList.contains('open')?'rotate(90deg)':''">
+               <span>Legal reference</span><span class="acc-arrow">›</span>
+             </button>
+             <div id="arule-${ruleId}" class="acc-body" style="font-size:9px;color:var(--text3);font-style:italic;line-height:1.5">${e.ruleRef}</div>
+           </div>`
+        : '';
+      const typeColor = e.type === 'verify' ? 'var(--green)' : e.type === 'warn' ? 'var(--amber)' : 'var(--text3)';
+      return `<div class="atrace-event">
+        <div class="atrace-event-hdr">
+          <span class="atrace-label" style="color:${typeColor}">${e.type === 'verify' ? '✓ ' : e.type === 'warn' ? '⚠ ' : '› '}${e.label}</span>
+          <span class="atrace-ts">${e.ts}</span>
+        </div>
+        <div class="atrace-detail">${e.text}</div>
+        ${citeHtml}${ruleHtml}
+      </div>`;
+    }).join('');
+  }
+
+  let html = '';
+
+  // Global events (startup, task generation) shown first
+  if (globalEvents.length) {
+    html += `<div class="atrace-task">
+      <div class="atrace-task-hdr">System <span class="atrace-count">${globalEvents.length} event${globalEvents.length !== 1 ? 's' : ''}</span></div>
+      <div class="atrace-events">${renderEventList(globalEvents)}</div>
     </div>`;
-  }).join('');
-  el.scrollTop = el.scrollHeight;
+  }
+
+  // Per-task groups
+  allTids.forEach(tid => {
+    const events = traceEvents[tid];
+    const task = (typeof tasks !== 'undefined' ? tasks : []).find(t => String(t.id) === String(tid));
+    const taskName = task ? task.name : 'Task ' + tid;
+    html += `<div class="atrace-task">
+      <div class="atrace-task-hdr">${taskName} <span class="atrace-count">${events.length} event${events.length !== 1 ? 's' : ''}</span></div>
+      <div class="atrace-events">${renderEventList(events)}</div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ── TAB SWITCHING ──
+function switchDashTab(name) {
+  ['checklist', 'trace'].forEach(n => {
+    const btn = document.getElementById('dtab-' + n);
+    const pane = document.getElementById('tab-' + n);
+    const active = n === name;
+    if (btn) btn.classList.toggle('active', active);
+    if (pane) pane.classList.toggle('active', active);
+  });
+  // Refresh trace tab content when opened so it always shows the latest events
+  if (name === 'trace') _renderTraceTab();
 }
 
 // ── GENERAL ASSISTANT ──

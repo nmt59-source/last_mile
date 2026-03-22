@@ -380,6 +380,7 @@ function renderWorkflow(t) {
       ${renderOptionsSection(t, wf)}
       <div id="wf-body-${t.id}" data-show-when="${bodyShowWhen}" style="${bodyDisplay}">${body}</div>
       ${isDone ? `<div class="done-banner"><div class="done-banner-title">✓ Task complete</div><div class="done-banner-sub">You can always reopen this task to edit notes or redraft the letter.</div></div>` : ''}
+      <div id="task-trace-${t.id}" class="task-trace-strip"></div>
       <div>
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px">
           <div class="slbl">Notes</div>
