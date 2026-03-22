@@ -8,8 +8,9 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0f0e0c;--bg2:#171613;--bg3:#1e1c18;--border:#2e2b24;--border2:#3d3930;--gold:#c9a84c;--gold2:#e8c97a;--text:#e8e4da;--text2:#9e9a8e;--text3:#5c5850;--red:#e05c4a;--amber:#d4893a;--green:#6aad7e;--blue:#5a9fd4}
-html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
-.screen{display:none;min-height:100vh;flex-direction:column}.screen.active{display:flex}
+html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.screen{display:none;height:100%;flex-direction:column;overflow-y:auto}.screen.active{display:flex}
+#s-dashboard{overflow:hidden}
 /* INTRO */
 #s-intro{align-items:center;justify-content:center;text-align:center;padding:48px 24px}
 .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:24px;opacity:.8}
@@ -95,8 +96,10 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .uchip{display:flex;align-items:center;gap:6px;padding:5px 9px;background:var(--bg3);border-radius:5px;border:1px solid var(--border)}
 .uchip-name{font-size:11px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uchip-sz{font-size:10px;color:var(--text3)}
-.uchip-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 1px}
+.uchip-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 2px;line-height:1}
 .uchip-del:hover{color:var(--red)}
+.uchip-preview{background:none;border:1px solid var(--border2);color:var(--blue);cursor:pointer;font-size:10px;padding:2px 7px;border-radius:3px;font-family:inherit;white-space:nowrap;transition:background .15s}
+.uchip-preview:hover{background:rgba(90,159,212,0.1)}
 .ulbl{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:7px 14px;border:1px dashed var(--border2);border-radius:5px;color:var(--text2);cursor:pointer;transition:all .2s}
 .ulbl:hover{border-color:var(--gold);color:var(--gold)}
 .ulbl.filled{border-style:solid;border-color:var(--green);color:var(--green)}
@@ -158,6 +161,32 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .trace-col{overflow-y:auto;border-left:1px solid var(--border);background:var(--bg3);padding:14px;display:flex;flex-direction:column;gap:8px;height:100%}
 .trace-title{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;flex-shrink:0}
 .trace-empty{font-size:11px;color:var(--text3);line-height:1.6;font-style:italic}
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg2);border:1px solid var(--green);border-radius:8px;padding:12px 18px;font-size:13px;color:var(--text);z-index:9999;box-shadow:0 6px 24px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:all .28s;max-width:360px;text-align:center;line-height:1.5}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+/* ACCORDION */
+.acc-toggle{width:100%;text-align:left;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:7px 10px;font-size:11px;color:var(--text3);font-family:inherit;border-radius:5px;transition:background .15s}
+.acc-toggle:hover{background:var(--bg3);color:var(--text2)}
+.acc-arrow{font-size:9px;transition:transform .2s}
+.acc-body{display:none;padding:8px 10px 4px}
+.acc-body.open{display:block}
+/* OPTIONS PANEL */
+.opt-btn{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit;color:var(--text);transition:all .15s}
+.opt-btn:hover{background:var(--bg3);border-color:var(--gold)}
+.opt-btn.sel{background:rgba(201,168,76,0.08);border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.opt-icon{font-size:16px;flex-shrink:0}
+.opt-lbl{font-size:12px;font-weight:500;line-height:1.3}
+.opt-desc{font-size:10px;color:var(--text3);margin-top:1px}
+.opt-check{margin-left:auto;color:var(--gold);font-size:12px;flex-shrink:0}
+/* CALL CARD */
+.call-card{background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;padding:14px 16px;margin-top:10px}
+.call-phone{font-size:22px;font-weight:600;color:var(--gold);letter-spacing:.02em;margin-bottom:2px}
+.call-hours{font-size:11px;color:var(--text3);margin-bottom:10px}
+.call-script{font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;line-height:1.75}
+/* LINK CHIPS (inline source links) */
+.src-chips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 4px}
+.src-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--blue);text-decoration:none;background:rgba(90,159,212,0.08);border:1px solid rgba(90,159,212,0.2);border-radius:4px;padding:2px 7px;white-space:nowrap;transition:background .15s}
+.src-chip:hover{background:rgba(90,159,212,0.15)}
 /* TRACE EVENTS */
 .trace-event{border-left:2px solid var(--border2);padding:6px 0 6px 10px;font-size:11px;color:var(--text2);line-height:1.6;animation:up .2s ease}
 .trace-event.step{border-color:var(--gold)}
@@ -226,7 +255,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .found-val a{color:var(--gold);text-decoration:none}
 /* DRAFT */
 .draft-box{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:13px;font-size:12px;color:var(--text);line-height:1.85;white-space:pre-wrap;max-height:260px;overflow-y:auto;margin:8px 0}
-.draft-box.streaming::after{content:'▋';animation:blink .8s step-end infinite;color:var(--gold)}
+.draft-box.streaming::after,.call-script.streaming::after{content:'▋';animation:blink .8s step-end infinite;color:var(--gold)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 /* GUARD */
 .guard-banner{background:rgba(212,137,58,0.08);border:1px solid rgba(212,137,58,0.22);border-radius:7px;padding:10px 13px;font-size:12px;color:var(--amber);line-height:1.65;display:flex;gap:8px}
@@ -238,6 +267,8 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 /* SENSITIVITY WARNING */
 .sens-warn{background:rgba(224,92,74,0.08);border:1px solid rgba(224,92,74,0.22);border-radius:6px;padding:8px 12px;font-size:11px;color:var(--red);line-height:1.6;margin:6px 0}
 .sens-warn strong{font-weight:500}
+.send-check{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px;cursor:pointer}
+.send-chk{margin-top:2px;flex-shrink:0;accent-color:var(--gold);width:14px;height:14px;cursor:pointer}
 /* EMAIL PROMPT */
 .email-prompt{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:12px 14px}
 .email-prompt-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:6px}
@@ -345,9 +376,9 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         <span class="ucard-icon">📋</span>
         <div class="ucard-info">
           <div class="ucard-name">Death certificate</div>
-          <div class="ucard-why">Almost every step requires a certified copy: the bank, Social Security, life insurance, the DMV, the probate court, and more. Uploading it here means your name, date, and location fill in automatically across every letter. We also use it to track how many certified copies you have left as you work through the list.</div>
+          <div class="ucard-why">Almost every step requires a certified copy — the bank, Social Security, life insurance, the DMV, and the probate court all ask for one. Upload it here if you have it. If not, that's okay — we'll add a task to your checklist to help you get copies.</div>
         </div>
-        <span class="ucard-badge req" id="cert-badge">Required</span>
+        <span class="ucard-badge imp" id="cert-badge">Recommended</span>
       </div>
       <div class="ufiles" id="cert-files"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -373,16 +404,33 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
       <div class="ucard-top">
         <span class="ucard-icon">🏦</span>
         <div class="ucard-info">
-          <div class="ucard-name">Bank statement or tax return</div>
-          <div class="ucard-why">This is how we find financial accounts. A bank statement confirms account numbers and institution names. A tax return lists every interest-paying bank, investment account, dividend source, and employer. Together they reveal accounts that might otherwise be missed. When you reach the financial notification tasks, we can scan these to build your complete list automatically.</div>
+          <div class="ucard-name">Bank statement</div>
+          <div class="ucard-why">Helps us find financial accounts. A bank statement confirms account numbers and institution names. When you reach the financial notification tasks, we scan it to pre-fill your institution list automatically.</div>
         </div>
         <span class="ucard-badge imp" id="bank-badge">Important</span>
       </div>
       <div class="ufiles" id="bank-files"></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <label class="ulbl" id="bank-lbl"><input type="file" accept=".pdf" style="display:none" onchange="handleFile('bank',this)"/> + Upload statement or return</label>
+        <label class="ulbl" id="bank-lbl"><input type="file" accept=".pdf,.txt,.csv" style="display:none" onchange="handleFile('bank',this)"/> + Upload bank statement</label>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6">No digital copy? Request a free IRS transcript at <a href="https://www.irs.gov/individuals/get-transcript" target="_blank" style="color:var(--gold)">irs.gov/individuals/get-transcript</a></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">PDF, CSV, or text file. No digital copy? Log in to your bank's website and download the most recent statement.</div>
+    </div>
+
+    <div class="ucard secondary">
+      <div class="ucard-top">
+        <span class="ucard-icon">📄</span>
+        <div class="ucard-info">
+          <div class="ucard-name">W-2 (wage and tax statement)</div>
+          <div class="ucard-why">If you have a W-2, uploading it lets us extract the employer name automatically. This pre-fills the "Notify employer HR" task so you don't have to look it up. All personal information (SSN, wages, withholding) is removed before anything leaves your device.</div>
+        </div>
+        <span class="ucard-badge opt" id="w2-badge">Optional</span>
+      </div>
+      <div class="ufiles" id="w2-files"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label class="ulbl" id="w2-lbl"><input type="file" accept=".pdf,.txt,.csv" style="display:none" onchange="handleFile('w2',this)"/> + Upload W-2</label>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6">No W-2 on hand? Request a free wage transcript at <a href="https://www.irs.gov/individuals/get-transcript" target="_blank" style="color:var(--gold)">irs.gov/individuals/get-transcript</a></div>
+      <div id="w2-scan-result" style="display:none;font-size:11px;color:var(--green);margin-top:6px"></div>
     </div>
   </div>
   <div class="ufoot">
@@ -426,8 +474,8 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         </div>
       </div>
       <div class="trace-col" id="tcoltrace">
-        <div class="trace-title">Agent trace</div>
-        <div class="trace-empty">Steps and reasoning will appear here as each task runs.</div>
+        <div class="trace-title">What's happening</div>
+        <div class="trace-empty">As you work through each task, we'll show you what steps are being taken and why.</div>
       </div>
     </div>
   </div>
@@ -448,24 +496,24 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         <div><span class="field-lbl">Ordered</span><input type="number" min="0" class="field-inp" id="tr-ord" oninput="trUpd()"/></div>
         <div><span class="field-lbl">On hand</span><input type="number" min="0" class="field-inp" id="tr-hand" oninput="trUpd()"/></div>
         <div><span class="field-lbl">Mailed / sent</span><input type="number" min="0" class="field-inp" id="tr-mail" oninput="trUpd()"/></div>
-      </div>
+  </div>
       <div style="margin-top:10px"><span class="field-lbl">Notes</span><input class="field-inp" id="tr-note" placeholder="Optional" oninput="trUpd()"/></div>
-    </div>
+</div>
     <div class="dcard">
       <div class="dcard-title">Institution response log</div>
       <div id="tr-resp-rows"></div>
       <button type="button" class="sa-btn" style="margin-top:10px" onclick="trAddRow()">+ Add row</button>
-    </div>
+          </div>
     <div class="dcard">
       <div class="dcard-title">Deadline reminders</div>
       <div id="tr-deadlines" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
-    </div>
+      </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
       <button type="button" class="btn-gold" onclick="exportTrackerPdf()">Print / Save as PDF</button>
       <button type="button" class="skip-btn" onclick="localStorage.removeItem(PASSAGE_LS_KEY);location.reload();" style="font-size:12px">Clear all saved data</button>
     </div>
-  </div>
-</div>
+    </div>
+    </div>
 
 <!-- GROUND TRUTH MODAL -->
 <div id="gt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)gtClose()">
@@ -476,9 +524,28 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button type="button" class="sa-btn" onclick="gtClose()">Edit draft first</button>
       <button type="button" class="sa-btn primary" onclick="gtConfirm()">Looks correct</button>
-    </div>
-  </div>
-</div>
+        </div>
+        </div>
+        </div>
+
+<!-- SEND CONFIRMATION MODAL -->
+<div id="send-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9001;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeSendModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;max-width:480px;width:100%;padding:24px;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <div style="font-family:'Playfair Display',serif;font-size:18px;margin-bottom:4px">Review before sending</div>
+    <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:18px">This is a public-facing communication. Verify all details are correct and no sensitive information is included before proceeding.</p>
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px">Privacy check</div>
+    <div id="send-modal-issues" style="font-size:12px;line-height:1.8;margin-bottom:16px;padding:10px 12px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)"></div>
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:6px">Estate details</div>
+    <div id="send-modal-intake" style="font-size:12px;line-height:1.9;margin-bottom:16px;padding:10px 12px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)"></div>
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:10px">Confirm before sending</div>
+    <div id="send-modal-checks" style="margin-bottom:18px"></div>
+    <div id="send-modal-blocked-msg" style="display:none;font-size:11px;color:var(--red);margin-bottom:12px;padding:8px 12px;background:rgba(224,92,74,0.08);border-radius:6px;border:1px solid rgba(224,92,74,0.25)">Please fix the errors flagged above before sending this communication.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="sa-btn" onclick="closeSendModal()">Go back and edit</button>
+      <button type="button" class="sa-btn primary" id="send-modal-confirm" onclick="confirmSend()" disabled>Confirmed — send</button>
+        </div>
+      </div>
+      </div>
 
 <!-- CHAT -->
 <button class="chat-fab" id="chat-fab" onclick="toggleChat()">💬</button>
@@ -490,1196 +557,38 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
     <button class="chat-starter" onclick="chatAsk('How many death certificates do I need?')">How many death certificates do I need?</button>
     <button class="chat-starter" onclick="chatAsk('What benefits might my family be entitled to?')">What benefits might my family be entitled to?</button>
     <button class="chat-starter" onclick="chatAsk('What is probate and do I need it?')">What is probate and do I need it?</button>
-  </div>
+      </div>
   <div class="chat-input-row">
     <input class="chat-input" id="chat-input" type="text" placeholder="Type your question…" onkeydown="if(event.key==='Enter')sendChat()"/>
     <button class="chat-send" id="chat-send" onclick="sendChat()">→</button>
-  </div>
-</div>
+      </div>
+          </div>
 
+<div id="toast"></div>
+
+<!-- Demo config — gitignored, set window.ANTHROPIC_API_KEY here for no-backend mode -->
+<script src="demo-config.js" onerror="/* file not present — backend mode */"></script>
+
+<!-- PDF.js — client-side PDF text extraction (Mozilla, Apache 2.0) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-// ── STATE ──
-const A={};
-let qIdx=0,tasks=[],customTasks=[],selTask=null,draftTxt='';
-const taskDone={},taskNotes={},wfState={},vaultFiles={cert:[],bank:[]};
-let emailOk=false,simCode='';
-
-const STATES=['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming','Washington D.C.'];
-const API_BASE=(typeof window!=='undefined'&&window.PASSAGE_API_BASE!==undefined)?window.PASSAGE_API_BASE:'http://localhost:8787';
-function apiRoot(){return(API_BASE||'http://localhost:8787').replace(/\/$/,'');}
-function anthropicFetch(bodyObj){return fetch(apiRoot()+'/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},body:JSON.stringify(bodyObj)});}
-function orchestrateBankUrl(){return apiRoot()+'/api/orchestrate/bank-draft';}
-const PASSAGE_LS_KEY='passage_estate_v1';
-let trackerState={certOrdered:0,certOnHand:0,certMailed:0,certNote:'',responses:[],dateOfDeath:''};
-function savePassageState(){try{localStorage.setItem(PASSAGE_LS_KEY,JSON.stringify({A,tasks,customTasks,taskDone,taskNotes,wfState,vaultFiles,trackerState,qIdx,customTasksId:window._customTaskSeq||0}));}catch(e){console.warn('save state',e);}}
-function loadPassageState(){try{const raw=localStorage.getItem(PASSAGE_LS_KEY);if(!raw)return;const s=JSON.parse(raw);Object.assign(A,s.A||{});if(s.tasks&&s.tasks.length)tasks=s.tasks;if(s.customTasks&&s.customTasks.length)customTasks=s.customTasks;else customTasks=(tasks||[]).filter(t=>String(t.id).startsWith('custom-'));if(s.taskDone)Object.assign(taskDone,s.taskDone);if(s.taskNotes)Object.assign(taskNotes,s.taskNotes);if(s.wfState)Object.assign(wfState,s.wfState);if(s.vaultFiles)Object.assign(vaultFiles,s.vaultFiles);if(s.trackerState)Object.assign(trackerState,s.trackerState);if(typeof s.qIdx==='number')qIdx=s.qIdx;if(s.customTasksId)window._customTaskSeq=s.customTasksId;if(s.trackerState&&s.trackerState.dateOfDeath)trackerState.dateOfDeath=s.trackerState.dateOfDeath;}catch(e){console.warn('load state',e);}}
-function scheduleSave(){clearTimeout(window._saveT);window._saveT=setTimeout(savePassageState,400);}
-
-// ── INTAKE ──
-const Qs=[
-  {id:'name',lbl:'What was the full name of the person who passed?',hint:'This name appears in all letters and notifications.',type:'text',ph:'Their full legal name'},
-  {id:'rel',lbl:'What is your relationship to them?',hint:'This helps identify which benefits and steps apply to you.',type:'single',opts:['Spouse or domestic partner','Adult child','Parent','Sibling','Executor (not a family member)','Other']},
-  {id:'state',lbl:'Which state did they live in?',hint:'Rules for probate, benefits, and transfers vary by state.',type:'select'},
-  {id:'assets',lbl:'Which of these did they have?',hint:'Select all that apply.',type:'multi',opts:['Bank or checking accounts','Savings or money market accounts','Traditional 401(k) or 403(b)','Roth 401(k) or Roth IRA','Traditional IRA','Investment or brokerage account','Life insurance policy','Home or real estate','Vehicle','Cryptocurrency or digital assets']},
-  {id:'debts',lbl:'Did they have any outstanding debts or obligations?',hint:'The estate is responsible for settling debts before assets are distributed.',type:'multi',opts:['Mortgage or home equity loan','Car loan','Credit card balances','Student loans','Medical bills','Personal loans','Business debts','No known debts']},
-  {id:'digital',lbl:'Which online accounts or subscriptions did they have?',hint:'Select all that apply. Each has its own process.',type:'multi',opts:['Facebook / Instagram','Apple ID / iCloud','Google account','Netflix / Hulu / streaming','Amazon / Prime','LinkedIn','Email account (Gmail, Outlook)','Other subscriptions']},
-  {id:'benefits',lbl:'Were they receiving any of these?',hint:'Helps identify notifications and what your family may be owed.',type:'multi',opts:['Social Security retirement or disability','Medicare or Medicaid','Veterans benefits (VA)','Pension from an employer','Workers compensation','None of the above']},
-  {id:'survivors',lbl:'Who else may be affected?',hint:'Helps identify survivor benefits.',type:'multi',opts:['Spouse or domestic partner still living','Children under 18','Children with a disability (any age)','Dependent parents','Others named in a will or trust','No one else']},
-  {id:'discover',lbl:'Could any of these apply?',hint:'Account discovery — we fold these into your checklist.',type:'multi',opts:['Old employer retirement or pension not listed yet','Military, union, or veteran benefits','Safe deposit box or home safe','Storage rental','Oil, gas, or mineral royalties','None of these']},
-  {id:'will',lbl:'Is there a will or estate plan?',hint:'Determines which legal steps are required.',type:'single',opts:['Yes, there is a will','Yes, there is a trust','Both a will and a trust','No will or trust known','Not sure yet']}
-];
-
-function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
-function renderQs(){
-  document.getElementById('qs').innerHTML=Qs.map((q,i)=>{
-    let inp='';
-    if(q.type==='text') inp=`<input class="q-input" id="qi${i}" type="text" placeholder="${q.ph||''}" value="${A[q.id]||''}" oninput="A['${q.id}']=this.value;valQ()"/>`;
-    else if(q.type==='select') inp=`<div class="select-wrap"><select class="q-select" id="qi${i}" onchange="A['${q.id}']=this.value;valQ()"><option value="">Select a state</option>${STATES.map(s=>`<option value="${s}"${A[q.id]===s?' selected':''}>${s}</option>`).join('')}</select><span class="select-arrow">▾</span></div>`;
-    else if(q.type==='single') inp=`<div class="opts">${q.opts.map(o=>`<div class="opt${A[q.id]===o?' sel':''}" onclick="pickOne('${q.id}',this,'${o.replace(/'/g,"\\'")}')">${o}</div>`).join('')}</div>`;
-    else inp=`<div class="opts">${q.opts.map(o=>`<div class="opt${(A[q.id]||[]).includes(o)?' sel':''}" onclick="pickMany('${q.id}',this,'${o.replace(/'/g,"\\'")}')">${o}</div>`).join('')}</div>`;
-    return `<div class="q-block${i===qIdx?' active':''}" id="qb${i}"><div class="q-lbl">${q.lbl}</div><div class="q-hint">${q.hint}</div>${inp}</div>`;
-  }).join('');
-  updNav();
-}
-function pickOne(id,el,v){A[id]=v;el.closest('.opts').querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');valQ();}
-function pickMany(id,el,v){if(!A[id])A[id]=[];if(A[id].includes(v)){A[id]=A[id].filter(x=>x!==v);el.classList.remove('sel');}else{A[id].push(v);el.classList.add('sel');}valQ();}
-function valQ(){const q=Qs[qIdx];const ok=q.type==='text'?!!(A[q.id]||'').trim():q.type==='select'?!!A[q.id]:(A[q.id]||[]).length>0;document.getElementById('bnxt').disabled=!ok;}
-function updNav(){document.getElementById('iprog').style.width=((qIdx+1)/Qs.length*100)+'%';document.getElementById('slbl2').textContent=`${qIdx+1} of ${Qs.length}`;document.getElementById('bbk').style.display=qIdx===0?'none':'block';document.getElementById('bnxt').textContent=qIdx===Qs.length-1?'Review and continue':'Continue';valQ();}
-function nextQ(){if(qIdx<Qs.length-1){document.getElementById('qb'+qIdx).classList.remove('active');qIdx++;document.getElementById('qb'+qIdx).classList.add('active');updNav();const inp=document.getElementById('qi'+qIdx);if(inp)inp.focus();}else showDeclaration();}
-function prevQ(){if(qIdx>0){document.getElementById('qb'+qIdx).classList.remove('active');qIdx--;document.getElementById('qb'+qIdx).classList.add('active');updNav();}}
-
-// ── VERIFICATION ──
-function chkEmail(){document.getElementById('btn-code').disabled=!(document.getElementById('e-inp').value||'').trim().includes('@');}
-function sendCode(){simCode=Math.floor(100000+Math.random()*900000).toString();document.getElementById('code-sec').style.display='block';console.log('Demo code:',simCode);}
-function chkCode(){const v=(document.getElementById('c-inp').value||'').trim();if(v.length===6&&v===simCode){emailOk=true;document.getElementById('e-ok').style.display='flex';document.getElementById('code-sec').style.display='none';}}
-function chkSig(){const val=(document.getElementById('sig-inp').value||'').trim(),hint=document.getElementById('sig-hint'),btn=document.getElementById('btn-dec'),inp=document.getElementById('sig-inp');if(!val){hint.textContent='';hint.className='nhint';inp.className='n-inp';btn.disabled=true;}else if(val.split(' ').length<2){hint.textContent='Please include your first and last name';hint.className='nhint bad';btn.disabled=true;}else{hint.textContent='Confirmed';hint.className='nhint ok';inp.className='n-inp ok';btn.disabled=false;}}
-function showDeclaration(){go('s-declare');const rel=A.rel||'executor',dec=A.name||'the person who passed',st=A.state||'this state';document.getElementById('dec-text').innerHTML=`I, <strong>[your name below]</strong>, confirm that I am the authorized <strong>${rel}</strong> of the estate of <strong>${dec}</strong>, and have legal authority to act on behalf of this estate under the laws of <strong>${st}</strong>.`;chkSig();}
-
-// ── UPLOAD ──
-function showCertGuide(){document.getElementById('cert-guide').style.display='block';}
-function handleFile(type,input){
-  if(!input.files||!input.files[0])return;
-  const f=input.files[0];
-  const sz=f.size>1024*1024?`${(f.size/1024/1024).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`;
-  vaultFiles[type].push({name:f.name,size:sz});
-  refreshFiles(type);
-  const lbl=document.getElementById(type+'-lbl');
-  if(lbl)lbl.classList.add('filled');
-  const badge=document.getElementById(type+'-badge');
-  if(badge){badge.textContent='Uploaded';badge.className='ucard-badge done';}
-  if(type==='bank'){
-    window._bankUploaded=true;
-    // Trigger tax/bank document parsing
-    parseTaxFile('',f.name).then(()=>preFillFromTax());
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
-  if(type==='cert')window._certUploaded=true;
-}
-function refreshFiles(type){const el=document.getElementById(type+'-files');if(!el)return;el.innerHTML=vaultFiles[type].map((f,i)=>`<div class="uchip"><span style="font-size:11px">📎</span><span class="uchip-name">${f.name}</span><span class="uchip-sz">${f.size}</span><button class="uchip-del" onclick="delFile('${type}',${i})">✕</button></div>`).join('');}
-function delFile(type,idx){vaultFiles[type].splice(idx,1);refreshFiles(type);}
-
-// ── LOADING ──
-const loadMsgs=['Reviewing your responses…','Identifying government notifications…','Finding benefit entitlements…','Building your task list…','Preparing draft letters…'];
-function startLoad(){
-  if(tasks.length&&A.name){
-    go('s-dashboard');
-    renderDash();
-    refreshFiles('cert');refreshFiles('bank');
-    scheduleSave();
-    return;
-  }
-  go('s-loading');
-  const el=document.getElementById('lsteps');el.innerHTML=loadMsgs.map(s=>`<div class="ls"><div class="ls-dot"></div>${s}</div>`).join('');const steps=el.querySelectorAll('.ls');let i=0;(function tick(){if(i>0)steps[i-1].classList.remove('active');if(i<steps.length){steps[i].classList.add('active');i++;setTimeout(tick,750);}})();
-  genTasks();
-}
-
-// ── TASK GENERATION ──
-async function genTasks(){
-  const p=`Person who passed: ${A.name||'Unknown'}
-Executor: ${A.rel||'Unknown'}
-State: ${A.state||'Unknown'}
-Assets: ${(A.assets||[]).join(', ')||'Unknown'}
-Debts: ${(A.debts||[]).join(', ')||'None stated'}
-Digital accounts: ${(A.digital||[]).join(', ')||'Unknown'}
-Benefits: ${(A.benefits||[]).join(', ')||'Unknown'}
-Surviving family: ${(A.survivors||[]).join(', ')||'None'}
-Discovery / extra contexts: ${(A.discover||[]).join(', ')||'None'}
-Will or trust: ${A.will||'Unknown'}`;
-  let apiList;
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:2500,system:`You are an expert estate administration specialist. Respond ONLY with a valid JSON array, no markdown.
-Each task: {id, category, name, description, urgency, institution}
-category: one of "Government and Legal", "Financial Accounts", "Property and Insurance", "Digital and Subscriptions", "Notifications", "Survivor Benefits"
-urgency: "immediate"|"soon"|"later"
-Keep tasks HIGH LEVEL — one per institution type. Do NOT create a "Will and Estate Plan" category. Fold will tasks (secure will, file probate, notify beneficiaries) into "Government and Legal".
-Include survivor benefits, SSA notifications, VA if veteran, all financial types from intake, final tax return.
-Generate 18 to 26 carefully tailored tasks. No em dashes.`,messages:[{role:'user',content:p}]});
-    const d=await r.json();const txt=d.content[0].text;
-    try{apiList=JSON.parse(txt);}catch(e){const m=txt.match(/\[[\s\S]*\]/);apiList=m?JSON.parse(m[0]):fallback();}
-  }catch(e){apiList=fallback();}
-  tasks=apiList.concat(customTasks);
-  tasks.forEach(t=>{if(taskDone[t.id]===undefined)taskDone[t.id]=false;});
-  setTimeout(renderDash,500);
-  scheduleSave();
-}
-
-// ── PROBATE NECESSITY LOGIC ──
-function needsProbate(){
-  const assets=A.assets||[];
-  const will=A.will||'';
-  // Clear yes - real property or non-beneficiary accounts without a trust
-  const hasRealEstate=assets.includes('Home or real estate');
-  const hasTrust=will.includes('trust');
-  const hasWill=will.includes('will');
-  const hasNoEstatePlan=will.includes('No will')||will.includes('Not sure');
-  // Named-beneficiary assets pass outside probate
-  const hasBeneficiaryAssets=assets.some(a=>a.includes('401')||a.includes('IRA')||a.includes('Roth')||a.includes('Life insurance'));
-  const hasBankOnly=assets.length>0&&assets.every(a=>a.includes('Bank')||a.includes('Savings')||a.includes('Vehicle')||a.includes('Crypto'));
-  if(hasTrust&&!hasRealEstate)return 'unlikely'; // trust avoids probate
-  if(hasRealEstate&&!hasTrust)return 'likely';   // real property almost always needs it
-  if(hasNoEstatePlan&&assets.length>0)return 'likely';
-  if(hasBeneficiaryAssets&&!hasRealEstate&&hasTrust)return 'unlikely';
-  if(hasBankOnly)return 'maybe';
-  return 'unknown';
-}
-
-// ── FILTER ──
-function shouldShow(t){
-  const n=(t.name||'').toLowerCase();
-  const assets=A.assets||[],benefits=A.benefits||[],digital=A.digital||[],survivors=A.survivors||[],debts=A.debts||[];
-  if(n.includes('life insurance')&&!assets.some(a=>a.includes('Life insurance')))return false;
-  if((n.includes('401')||n.includes('403'))&&!assets.some(a=>a.includes('401')||a.includes('403')))return false;
-  if(n.includes('roth')&&!assets.some(a=>a.includes('Roth')))return false;
-  if(n.includes('traditional ira')&&!assets.some(a=>a.includes('Traditional IRA')))return false;
-  if((n.includes('brokerage')||n.includes('investment account'))&&!assets.some(a=>a.includes('Investment')||a.includes('brokerage')))return false;
-  if((n.includes('vehicle')||n.includes('dmv')||n.includes('car title'))&&!assets.includes('Vehicle'))return false;
-  if((n.includes('real estate')||n.includes('property transfer'))&&!assets.includes('Home or real estate'))return false;
-  if((n.includes('crypto')||n.includes('bitcoin'))&&!assets.includes('Cryptocurrency or digital assets'))return false;
-  if((n.includes('veteran')||n.includes('va pension')||n.includes('burial allow')||n.includes('dic'))&&!benefits.includes('Veterans benefits (VA)'))return false;
-  if((n.includes('medicare')||n.includes('medicaid'))&&!benefits.includes('Medicare or Medicaid'))return false;
-  if(n.includes('workers comp')&&!benefits.includes('Workers compensation'))return false;
-  if((n.includes('facebook')||n.includes('instagram'))&&!digital.some(d=>d.includes('Facebook')))return false;
-  if((n.includes('icloud')||n.includes('apple id'))&&!digital.some(d=>d.includes('Apple')))return false;
-  if((n.includes('google')||n.includes('gmail'))&&!digital.some(d=>d.includes('Google')))return false;
-  if((n.includes('netflix')||n.includes('hulu')||n.includes('streaming'))&&!digital.some(d=>d.includes('Netflix')||d.includes('streaming')))return false;
-  if((n.includes('amazon')||n.includes('prime'))&&!digital.some(d=>d.includes('Amazon')))return false;
-  if(n.includes('linkedin')&&!digital.some(d=>d.includes('LinkedIn')))return false;
-  if((n.includes('surviving spouse')||n.includes('widow survivor'))&&!survivors.some(s=>s.includes('Spouse')))return false;
-  if((n.includes('child survivor')||n.includes('minor child benefit'))&&!survivors.some(s=>s.includes('Children under 18')))return false;
-  // Debt-related tasks: only show if debts selected
-  if((n.includes('credit card')||n.includes('settle balance'))&&!debts.some(d=>d.includes('Credit card')))return false;
-  if((n.includes('mortgage')||n.includes('home loan'))&&!debts.some(d=>d.includes('Mortgage')))return false;
-  if(n.includes('student loan')&&!debts.some(d=>d.includes('Student')))return false;
-  if(n.includes('medical bill')&&!debts.some(d=>d.includes('Medical')))return false;
-  // Probate: smart filter based on estate composition
-  if(n.includes('probate')){
-    const p=needsProbate();
-    if(p==='unlikely')return false; // trust-based estate, skip probate task
-    // 'likely', 'maybe', 'unknown' all keep the task but we adjust the description
-    if(p==='maybe'||p==='unknown'){
-      // Mutate the task description to reflect uncertainty
-      t.description=p==='maybe'
-        ?`Probate may not be required — most assets appear to pass by beneficiary designation or joint ownership. Confirm with the financial institutions first. If any accounts have no named beneficiary, probate may still be needed.`
-        :`We cannot determine from the information provided whether probate is required. This depends on how assets are titled and whether named beneficiaries are current. We recommend a brief consultation with a local estate attorney to confirm.`;
-      t.urgency='soon'; // downgrade urgency when uncertain
-    }
-  }
-  return true;
-}
-
-// ── ICONS & ORDER ──
-const ICONS={'Government and Legal':'🏛','Financial Accounts':'🏦','Property and Insurance':'🏠','Digital and Subscriptions':'📱','Notifications':'✉️','Survivor Benefits':'💛'};
-const CAT_ORDER=['Government and Legal','Financial Accounts','Property and Insurance','Digital and Subscriptions','Notifications','Survivor Benefits'];
-
-function renderDash(){
-  go('s-dashboard');
-  tasks=tasks.filter(shouldShow);
-  document.getElementById('dname').textContent=A.name||'the Estate';
-  document.getElementById('dmeta').textContent=`${A.state||''} · ${A.rel||''} · ${tasks.length} tasks`;
-  updProg();
-  const cats={};
-  tasks.forEach(t=>{if(!cats[t.category])cats[t.category]=[];cats[t.category].push(t);});
-  const uo={immediate:0,soon:1,later:2};
-  Object.values(cats).forEach(a=>a.sort((a,b)=>(uo[a.urgency]||1)-(uo[b.urgency]||1)));
-  const sorted=Object.entries(cats).sort(([a],[b])=>{const ai=CAT_ORDER.indexOf(a),bi=CAT_ORDER.indexOf(b);return(ai<0?99:ai)-(bi<0?99:bi);});
-  document.getElementById('tcol').innerHTML=sorted.map(([c,ts])=>`
-    <div class="cat-sec">
-      <div class="cat-hdr"><span class="cat-icon">${ICONS[c]||'📋'}</span><span class="cat-name">${c}</span><span class="cat-count">${ts.length}</span></div>
-      <div class="tasks">${ts.map(t=>{
-        const isDone=taskDone[t.id];
-        const urgCls=t.urgency==='immediate'?'now':t.urgency==='soon'?'soon':'later';
-        const urgLabel=t.urgency==='immediate'?'Do first':t.urgency==='soon'?'Soon':'Later';
-        const dh=depHintFor(t);
-        return `<div class="ti${selTask&&selTask.id===t.id?' sel':''}" id="ti${t.id}" onclick="selT('${t.id}')">
-          <div class="ti-chk${isDone?' done':''}" id="chk${t.id}" onclick="event.stopPropagation();togDone('${t.id}')">${isDone?'✓':''}</div>
-          <div class="ti-body">
-            <div class="ti-name${isDone?' done':''}">${t.name}</div>
-            <div class="ti-sub">${t.institution||''}${dh?' · <span style="color:var(--amber)">'+dh+'</span>':''}</div>
-          </div>
-          <div class="urg ${urgCls}">${urgLabel}</div>
-        </div>`;}).join('')}</div>
-    </div>`).join('')+`<div style="padding:12px 18px 18px;border-top:1px solid var(--border)"><button type="button" class="sa-btn" onclick="addCustomTask()">+ Add custom task</button></div>`;
-}
-function depHintFor(t){
-  const n=(t.name||'').toLowerCase();
-  const certTask=tasks.find(x=>(x.name||'').toLowerCase().includes('death cert'));
-  const certOk=!certTask||taskDone[certTask.id];
-  if(!certOk&&(n.includes('bank')||n.includes('financial')||n.includes('freeze')))return 'Tip: death certificates first';
-  return '';
-}
-function addCustomTask(){
-  const name=prompt('Name for this task');if(!name||!name.trim())return;
-  window._customTaskSeq=(window._customTaskSeq||0)+1;
-  const id='custom-'+window._customTaskSeq;
-  const o={id,category:'Custom',name:name.trim(),description:'Custom task',urgency:'soon',institution:''};
-  customTasks.push(o);
-  tasks.push(o);
-  taskDone[id]=false;
-  renderDash();
-  scheduleSave();
-}
-function togDone(id){taskDone[id]=!taskDone[id];const chk=document.getElementById('chk'+id),nm=document.getElementById('ti'+id)?.querySelector('.ti-name');if(chk){chk.classList.toggle('done',taskDone[id]);chk.textContent=taskDone[id]?'✓':'';}if(nm)nm.classList.toggle('done',taskDone[id]);updProg();if(selTask&&selTask.id===id)renderWorkflow(selTask);scheduleSave();}
-function updProg(){const total=tasks.length,comp=tasks.filter(t=>taskDone[t.id]).length;const p=total?Math.round(comp/total*100):0;document.getElementById('pfill').style.width=p+'%';document.getElementById('plbl').textContent=`${comp} of ${total} complete`;}
-function selT(id){selTask=tasks.find(t=>t.id===id);document.querySelectorAll('.ti').forEach(el=>el.classList.remove('sel'));const el=document.getElementById('ti'+id);if(el)el.classList.add('sel');renderWorkflow(selTask);updateChatContext(selTask);}
-
-// ── TRACE ──
-const traceEvents={};
-function addTrace(tid,type,label,text){if(!traceEvents[tid])traceEvents[tid]=[];traceEvents[tid].push({type,label,text,ts:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})});renderTrace(tid);}
-function renderTrace(tid){
-  const el=document.getElementById('tcoltrace');
-  if(!el)return;
-  const events=traceEvents[tid]||[];
-  if(!events.length){el.innerHTML='<div class="trace-title">Agent trace</div><div class="trace-empty">Steps and reasoning will appear here as each task runs.</div>';return;}
-  el.innerHTML='<div class="trace-title">Agent trace</div>'+events.map(e=>`<div class="trace-event ${e.type}"><div class="trace-label">${e.label}</div><div class="trace-text">${e.text}</div></div>`).join('');
-  el.scrollTop=el.scrollHeight;
-}
-
-// ── WORKFLOW STATE MACHINE ──
-// wfState[taskId] = { step: 0..N, data: {}, draftText: '' }
-function getWF(tid){if(!wfState[tid])wfState[tid]={step:0,data:{},draft:''};return wfState[tid];}
-function setWFStep(tid,step){getWF(tid).step=step;renderWorkflow(selTask);}
-
-// ── WORKFLOW RENDERER ──
-function renderWorkflow(t){
-  if(!t)return;
-  const wcol=document.getElementById('wcol');
-  if(!wcol)return;
-  try{
-  const n=(t.name||'').toLowerCase();
-  const wf=getWF(t.id);
-  const isDone=taskDone[t.id];
-  const urgCls=t.urgency==='immediate'?'now':t.urgency==='soon'?'soon':'later';
-  const urgLabel=t.urgency==='immediate'?'Do first':t.urgency==='soon'?'Coming up':'Later on';
-
-  let body='';
-
-  // Determine workflow type
-  const isBank=n.includes('bank')||n.includes('financial account')||n.includes('freeze');
-  const isStreaming=n.includes('streaming')||n.includes('subscri')||['netflix','hulu','amazon'].some(s=>n.includes(s));
-  const isEmployer=n.includes('employer')||n.includes('hr');
-  const isSSA=(n.includes('social security')||n.includes('ssa'))&&(n.includes('notify')||n.includes('report'));
-  const isVA=n.includes('va ')||n.includes('veteran')||n.includes('burial allow')||n.includes('dic');
-  const isLife=n.includes('life insurance')&&(n.includes('claim')||n.includes('notify'));
-  const needsLawyer=n.includes('probate')||n.includes('out of state')||n.includes('estate attorney')||n.includes('letters testamentary');
-
-  if(isBank) body=bankWorkflow(t,wf);
-  else if(isStreaming) body=streamingWorkflow(t,wf);
-  else if(isEmployer) body=employerWorkflow(t,wf);
-  else if(isSSA) body=ssaWorkflow(t,wf);
-  else if(isVA) body=vaWorkflow(t,wf);
-  else if(isLife) body=lifeInsWorkflow(t,wf);
-  else body=genericWorkflow(t,wf);
-
-  if(needsLawyer)body+=renderLawyerCard(t);
-
-  document.getElementById('wcol').innerHTML=`
-    <div class="wf-header">
-      <div class="slbl" style="margin-bottom:5px">Task</div>
-      <div class="wf-task-name">${t.name}</div>
-      <div class="wf-meta" style="margin-top:7px">
-        <span class="badge urg ${urgCls}">${urgLabel}</span>
-        <span class="badge" style="background:var(--bg3);color:var(--text2);border-radius:3px;padding:2px 8px;font-size:10px">${t.category}</span>
-        ${t.institution?`<span class="badge" style="background:var(--bg3);color:var(--text2);border-radius:3px;padding:2px 8px;font-size:10px">${t.institution}</span>`:''}
-      </div>
-    </div>
-    <div class="d-desc" style="font-size:13px;color:var(--text2);line-height:1.75;padding:11px;background:var(--bg3);border-radius:7px;border:1px solid var(--border)">${t.description}</div>
-    ${body}
-    ${isDone?`<div class="done-banner"><div class="done-banner-title">✓ Task complete</div><div class="done-banner-sub">You can always reopen this task to edit notes or redraft the letter.</div></div>`:''}
-    <div>
-      <div class="slbl" style="margin-bottom:5px">Your notes</div>
-      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden"><textarea style="width:100%;background:transparent;border:none;padding:10px 12px;color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:56px;line-height:1.6;::placeholder{color:var(--text3)}" placeholder="Notes, account numbers, context…" oninput="taskNotes['${t.id}']=this.value;scheduleSave();">${taskNotes[t.id]||''}</textarea></div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-gold" style="flex:1;font-size:13px;padding:10px" onclick="togDone('${t.id}')">${isDone?'Mark as not done':'Mark as complete'}</button>
-    </div>
-  `;
-  renderTrace(t.id);
-  }catch(err){
-    document.getElementById('wcol').innerHTML=`<div style="padding:20px;font-size:13px;color:var(--red)">Error loading task: ${err.message}</div>`;
-    console.error('renderWorkflow error:',err);
-  }
-}
-
-// ── BANK WORKFLOW (full 6-step agentic) ──
-const bankContactDB={
-  'chase':{name:'JPMorgan Chase',dept:'Chase Estate Services',phone:'1-888-269-8690',hours:'Mon–Fri 9am–5pm ET',address:'Chase Bank Estate Services\nPO Box 659754, San Antonio TX 78265',web:'chase.com/estate-services',form:'Death notification form (online or in branch)',certReq:'1 certified copy (returned to you).',note:'You can also visit any branch with the death certificate and executor documentation.'},
-  'bank of america':{name:'Bank of America',dept:'Estate Servicing Department',phone:'1-888-689-4357',hours:'Mon–Fri 8am–8pm ET',address:'Estate Servicing\nPO Box 982235, El Paso TX 79998',web:'bankofamerica.com/deposits/manage/estate-services',form:'Notification of Death form',certReq:'1 certified copy.',note:''},
-  'wells fargo':{name:'Wells Fargo',dept:'Estate Care Center',phone:'1-800-869-3557',hours:'Mon–Fri 8am–5pm ET',address:'Wells Fargo Estate Services\nPO Box 10306, Des Moines IA 50306',web:'wellsfargo.com/financial-education/life-events/deceased-account-holder',form:'Estate Settlement Request',certReq:'1 certified copy.',note:''},
-  'citibank':{name:'Citibank',dept:'Estate Unit',phone:'1-888-248-4226',hours:'Mon–Fri 9am–5pm ET',address:'Citi Estate Unit\nPO Box 769006, San Antonio TX 78245',web:'citi.com',form:'Written notification with death certificate',certReq:'1 certified copy.',note:''},
-  default:{name:'Financial Institution',dept:'Estate Services Department',phone:'See account statements',hours:'Business hours',address:'Mail to Estate Services at the address on your statement',web:'Search institution name + estate services',form:'Written notification with death certificate',certReq:'1 certified copy.',note:'Ask to speak with the Estate Services or Bereavement team when you call.'}
-};
-function findBankContact(bankName){const k=(bankName||'').toLowerCase();for(const[key,val] of Object.entries(bankContactDB)){if(k.includes(key)||key.includes(k.split(' ')[0]))return val;}return{...bankContactDB.default,name:bankName||'Financial Institution'};}
-
-function bankWorkflow(t,wf){
-  const step=wf.step||0;
-  const steps=[
-    {label:'Select bank',status:step>0?'done':step===0?'active':'pending'},
-    {label:'Verify contact',status:step>1?'done':step===1?'active':'pending'},
-    {label:'Account details',status:step>2?'done':step===2?'active':'pending'},
-    {label:'Draft letter',status:step>3?'done':step===3?'active':'pending'},
-    {label:'Privacy check',status:step>4?'done':step===4?'active':'pending'},
-    {label:'Send',status:step>5?'done':step===5?'active':'pending'},
-  ];
-
-  let body=renderStepTrack(steps);
-
-  // Known banks for dropdown
-  const TOP_BANKS=['JPMorgan Chase','Bank of America','Wells Fargo','Citibank','U.S. Bank','Truist Bank','PNC Bank','Goldman Sachs','Capital One','TD Bank','Citizens Bank','Ally Bank','Regions Bank','Fifth Third Bank','KeyBank','Huntington Bank','Navy Federal Credit Union','Charles Schwab','Fidelity','Vanguard','Merrill Lynch','Morgan Stanley','Edward Jones','Raymond James','Other / not listed'];
-  // Accounts found from tax scan
-  const taxAccounts=window._taxAccounts||(window._taxParsed?'Tax return uploaded — click "Scan for accounts" below':null);
-
-  if(step===0){
-    const bankOptions=TOP_BANKS.map(b=>`<option value="${b}"${wf.data.bankName===b?' selected':''}>${b}</option>`).join('');
-    body+=`<div class="step-card active-step">
-      <div class="step-card-hdr"><div class="step-num">1</div><div class="step-card-title">Select the financial institution</div><span class="step-card-status">In progress</span></div>
-      <div class="step-card-body">
-        <p class="step-desc">Choose from common banks below, or type the name if it is not listed.</p>
-        ${taxAccounts?`<div style="background:rgba(90,159,212,0.1);border:1px solid rgba(90,159,212,0.25);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:12px">
-          <div style="font-weight:500;margin-bottom:4px">📊 Accounts found in your tax documents</div>
-          <div style="color:var(--text2);white-space:pre-wrap">${taxAccounts}</div>
-        </div>`:''}
-        <div class="field-row">
-          <label class="field-lbl">Institution name <span>*</span></label>
-          <select class="field-inp" id="bank-select-${t.id}" onchange="syncBankInput('${t.id}')" style="margin-bottom:6px">
-            <option value="">— Select a bank —</option>${bankOptions}
-          </select>
-          <input class="field-inp" id="bank-name-inp" placeholder="Or type bank name here…" value="${wf.data.bankName||''}" oninput="syncBankSelect('${t.id}')"/>
-        </div>
-        <div class="field-row">
-          <label class="field-lbl">Account type</label>
-          <select class="field-inp" id="bank-acct-inp">
-            <option value="">— Select type (optional) —</option>
-            <option${wf.data.acctType==='Checking'?' selected':''}>Checking</option>
-            <option${wf.data.acctType==='Savings'?' selected':''}>Savings</option>
-            <option${wf.data.acctType==='Money market'?' selected':''}>Money market</option>
-            <option${wf.data.acctType==='Joint checking'?' selected':''}>Joint checking</option>
-            <option${wf.data.acctType==='Investment / brokerage'?' selected':''}>Investment / brokerage</option>
-            <option${wf.data.acctType==='IRA'?' selected':''}>IRA</option>
-            <option${wf.data.acctType==='401(k)'?' selected':''}>401(k)</option>
-            <option${wf.data.acctType==='Multiple accounts'?' selected':''}>Multiple accounts</option>
-          </select>
-        </div>
-        <div class="step-actions">
-          <button class="sa-btn primary" onclick="bankStep1Find('${t.id}')">Find contact information</button>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  if(step>=1){
-    const info=findBankContact(wf.data.bankName||'');
-    body+=`<div class="step-card ${step===1?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">${step>1?'✓':'2'}</div><div class="step-card-title">Verify contact information</div><span class="step-card-status">${step>1?'Done':'Confirm'}</span></div>
-      <div class="step-card-body">
-        <p class="step-desc">Here is what we found. Please confirm this looks correct before we proceed.</p>
-        <div class="found-card">
-          <div class="found-card-title">Contact found: ${info.name}</div>
-          <div class="found-row"><span class="found-icon">🏛</span><div><div class="found-lbl">Department</div><div class="found-val">${info.dept}</div></div></div>
-          <div class="found-row"><span class="found-icon">📞</span><div><div class="found-lbl">Phone</div><div class="found-val">${info.phone} <span style="font-size:10px;color:var(--text3)">${info.hours}</span></div></div></div>
-          <div class="found-row"><span class="found-icon">✉</span><div><div class="found-lbl">Mailing address</div><div class="found-val" style="white-space:pre-line">${info.address}</div></div></div>
-          ${info.form?`<div class="found-row"><span class="found-icon">📋</span><div><div class="found-lbl">Required form</div><div class="found-val">${info.form}</div></div></div>`:''}
-          <div class="found-row"><span class="found-icon">📋</span><div><div class="found-lbl">Death certificate</div><div class="found-val">${info.certReq}</div></div></div>
-          ${info.note?`<div style="font-size:11px;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">${info.note}</div>`:''}
-        </div>
-        ${step===1?`<div class="step-actions"><button class="sa-btn primary" onclick="bankStep2Confirm('${t.id}')">This looks correct — continue</button><button class="sa-btn" onclick="bankStep0Edit('${t.id}')">Edit institution</button></div>`:''}
-      </div>
-    </div>`;
-  }
-
-  if(step>=2){
-    // Pre-fill from tax data if available
-    const prefillNote=window._taxAccounts?`<div style="font-size:11px;color:var(--blue);margin-bottom:8px;padding:6px 10px;background:rgba(90,159,212,0.07);border-radius:5px">Fields pre-filled from your tax documents where possible</div>`:'';
-    body+=`<div class="step-card ${step===2?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">${step>2?'✓':'3'}</div><div class="step-card-title">Account details</div><span class="step-card-status">${step>2?'Done':'Fill in'}</span></div>
-      <div class="step-card-body">
-        ${step===2?`${prefillNote}<div class="field-row"><label class="field-lbl">Account number — last 4 digits only</label><input class="field-inp" id="bank-acct-num" placeholder="e.g. 4242" maxlength="4" value="${wf.data.acctNum||''}"/></div>
-        <div class="field-row"><label class="field-lbl">Additional context (optional)</label><input class="field-inp" id="bank-context" placeholder="e.g. joint account with spouse, online-only account" value="${wf.data.context||''}"/></div>
-        <div class="step-actions"><button class="sa-btn primary" onclick="bankStep3Draft('${t.id}')">Draft the notification letter</button></div>`
-        :`<div style="font-size:12px;color:var(--text2)">Account details saved.</div>`}
-      </div>
-    </div>`;
-  }
-
-  if(step>=3){
-    const draft=getDraft(t.id)||wf.draft||'';
-    body+=`<div class="step-card ${step===3?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">${step>3?'✓':'4'}</div><div class="step-card-title">Review the draft letter</div><span class="step-card-status">${step>3?'Done':'Review'}</span></div>
-      <div class="step-card-body">
-        ${wf.draftStreaming?`<div class="draft-box streaming" id="draft-stream-${t.id}"></div>`:draft?`<div class="draft-box" id="draft-box-${t.id}">${draft}</div>`:'<div style="font-size:12px;color:var(--text3)">Generating…</div>'}
-        ${step===3&&draft&&!wf.draftStreaming?`<div class="step-actions">
-          <label style="font-size:11px;color:var(--text2);display:flex;gap:6px;align-items:center;width:100%;margin-bottom:4px"><input type="checkbox" id="email-mode-${t.id}" onchange="window._bankEmailMode=this.checked"/> Format copy as email (To / Subject / body)</label>
-          <button class="sa-btn primary" onclick="bankStepGtOpen('${t.id}')">This looks good — continue</button>
-          <button class="sa-btn" onclick="redraftBank('${t.id}')">Redraft</button>
-          <button class="sa-btn" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy letter</button>
-          <button class="sa-btn" onclick="downloadDraftTxt('${t.id}')">Download .txt</button>
-        </div>`:''}
-      </div>
-    </div>`;
-  }
-
-  if(step>=4){
-    const draft=getDraft(t.id)||wf.draft||'';
-    const sensIssues=checkSensitivity(draft);
-    body+=`<div class="step-card ${step===4?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">${step>4?'✓':'5'}</div><div class="step-card-title">Privacy check</div><span class="step-card-status">${step>4?'Done':sensIssues.length?'Review needed':'Passed'}</span></div>
-      <div class="step-card-body">
-        ${sensIssues.length?`<div class="sens-warn"><strong>Heads up:</strong> We noticed ${sensIssues.join(', ')} in the draft. Remove this before sending. Banks only need the last 4 digits of an account number.</div>`:'<div style="color:var(--green);font-size:13px;margin-bottom:8px">✓ No sensitive information detected in the letter.</div>'}
-        ${step===4?`<div class="step-actions"><button class="sa-btn primary" onclick="bankStep5Send('${t.id}')">Confirmed — ready to send</button></div>`:''}
-      </div>
-    </div>`;
-  }
-
-  if(step>=5){
-    const info=findBankContact(wf.data.bankName||'');
-    body+=`<div class="step-card ${step===5?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">6</div><div class="step-card-title">Send the letter</div><span class="step-card-status">${taskDone[t.id]?'Done':'Ready'}</span></div>
-      <div class="step-card-body">
-        <p class="step-desc">Your letter is ready. Copy it and send from your own email, or print and mail to the address below.</p>
-        <div class="email-prompt">
-          <div class="email-prompt-title">Send by email</div>
-          <div class="email-prompt-hint">Copy the subject line and letter below, then paste into your email app.</div>
-          <div class="found-lbl" style="margin-bottom:4px">To:</div>
-          <div class="copy-box">${info.dept} — ${info.name}</div>
-          <div class="found-lbl" style="margin-bottom:4px">Subject line:</div>
-          <div class="copy-box">Estate Notification — ${A.name||'[Deceased Name]'} — Account Holder Deceased</div>
-          <div class="step-actions">
-            <button class="sa-btn primary" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy letter text</button>
-            <button class="sa-btn" onclick="togDone('${t.id}')">Mark task complete</button>
-          </div>
-        </div>
-        <div class="found-card" style="margin-top:8px">
-          <div class="found-card-title">Or mail to:</div>
-          <div class="found-row"><span class="found-icon">✉</span><div><div class="found-val" style="white-space:pre-line">${info.address}</div></div></div>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  return body;
-}
-
-// ── DRAFT STORE (shared across workflows) ──
-const draftStore={};
-function setDraft(tid,txt){draftStore[tid]=txt;}
-function getDraft(tid){return draftStore[tid]||'';}
-function bankStepGtOpen(tid){
-  const draft=getDraft(tid)||getWF(tid).draft||'';
-  const first=(A.name||'').split(/\s+/)[0]||'';
-  const nameLikely=!first||!draft||draft.toLowerCase().includes(first.toLowerCase());
-  const html=`<div><strong>Deceased (intake):</strong> ${A.name||'—'}</div><div><strong>State:</strong> ${A.state||'—'}</div><div><strong>Your role:</strong> ${A.rel||'—'}</div>${nameLikely?'':'<p style="color:var(--amber);margin-top:10px">The draft may not include the deceased name as you entered it. Review the letter text carefully.</p>'}`;
-  document.getElementById('gt-body').innerHTML=html;
-  document.getElementById('gt-modal').style.display='flex';
-  window._gtTid=tid;
-}
-function gtClose(){document.getElementById('gt-modal').style.display='none';window._gtTid=null;}
-function gtConfirm(){const tid=window._gtTid;gtClose();if(tid)bankStep4Review(tid);}
-function renderTracker(){
-  const o=document.getElementById('tr-ord'),h=document.getElementById('tr-hand'),m=document.getElementById('tr-mail'),n=document.getElementById('tr-note');
-  if(o)o.value=trackerState.certOrdered||0;
-  if(h)h.value=trackerState.certOnHand||0;
-  if(m)m.value=trackerState.certMailed||0;
-  if(n)n.value=trackerState.certNote||'';
-  trRenderRows();
-  trDeadlines();
-}
-function trUpd(){
-  trackerState.certOrdered=Number(document.getElementById('tr-ord')?.value)||0;
-  trackerState.certOnHand=Number(document.getElementById('tr-hand')?.value)||0;
-  trackerState.certMailed=Number(document.getElementById('tr-mail')?.value)||0;
-  trackerState.certNote=document.getElementById('tr-note')?.value||'';
-  scheduleSave();
-  trDeadlines();
-}
-function trRenderRows(){
-  const el=document.getElementById('tr-resp-rows');
-  if(!el)return;
-  if(!trackerState.responses)trackerState.responses=[];
-  el.innerHTML=trackerState.responses.map((r,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-    <input class="field-inp" placeholder="Institution" value="${(r.institution||'').replace(/"/g,'&quot;')}" oninput="trRow(${i},'institution',this.value)"/>
-    <input class="field-inp" placeholder="Sent date" value="${(r.sentDate||'').replace(/"/g,'&quot;')}" oninput="trRow(${i},'sentDate',this.value)"/>
-    <input class="field-inp" placeholder="Channel (email, mail…)" value="${(r.channel||'').replace(/"/g,'&quot;')}" oninput="trRow(${i},'channel',this.value)"/>
-    <select class="field-inp" onchange="trRow(${i},'response',this.value)">
-      <option value="pending" ${r.response==='pending'?'selected':''}>Pending</option>
-      <option value="yes" ${r.response==='yes'?'selected':''}>Response received</option>
-      <option value="no" ${r.response==='no'?'selected':''}>No response yet</option>
-    </select>
-  </div>`).join('')||'<div style="font-size:12px;color:var(--text3)">No rows yet.</div>';
-}
-function trRow(i,k,v){if(!trackerState.responses[i])return;trackerState.responses[i][k]=v;scheduleSave();}
-function trAddRow(){if(!trackerState.responses)trackerState.responses=[];trackerState.responses.push({institution:'',sentDate:'',channel:'',response:'pending'});trRenderRows();scheduleSave();}
-function trDeadlines(){
-  const el=document.getElementById('tr-deadlines');
-  if(!el)return;
-  const lines=[];
-  if(A.dateOfDeath||trackerState.dateOfDeath)lines.push('Return SSA payments after date of death as instructed (often within 60 days).','Employer COBRA election: often within 60 days.');
-  else lines.push('Add date of death under document upload for SSA and COBRA deadline hints.');
-  el.innerHTML=lines.map(l=>`<div style="margin-bottom:6px">› ${l}</div>`).join('');
-}
-function exportTrackerPdf(){
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>Passage tracker</title></head><body style="font-family:system-ui,sans-serif;padding:24px;line-height:1.5"><h1>Passage tracker</h1><h2>Certified copies</h2><p>Ordered: ${trackerState.certOrdered||0}, on hand: ${trackerState.certOnHand||0}, mailed: ${trackerState.certMailed||0}</p><p>${trackerState.certNote||''}</p><h2>Institution log</h2><pre style="white-space:pre-wrap">${JSON.stringify(trackerState.responses||[],null,2)}</pre></body></html>`);
-  w.document.close();
-  w.focus();
-  w.print();
-}
-function downloadDraftTxt(tid){
-  let txt=getDraft(tid)||getWF(tid).draft||'';
-  if(!txt)return;
-  const em=document.getElementById('email-mode-'+tid);
-  const wf=getWF(tid);
-  if(em&&em.checked&&wf.data&&wf.data.bankName){
-    const info=findBankContact(wf.data.bankName);
-    txt=`To: ${info.dept} — ${info.name}\nSubject: Estate Notification — ${A.name||'[Name]'} — Account Holder Deceased\n\n${txt}`;
-  }
-  const blob=new Blob([txt],{type:'text/plain'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='passage-letter.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-function copyDraftFor(tid){
-  let txt=getDraft(tid)||getWF(tid).draft||'';
-  if(!txt)return;
-  const em=document.getElementById('email-mode-'+tid);
-  const wf=getWF(tid);
-  if(em&&em.checked&&wf.data&&wf.data.bankName){
-    const info=findBankContact(wf.data.bankName);
-    txt=`To: ${info.dept} — ${info.name}\nSubject: Estate Notification — ${A.name||'[Name]'} — Account Holder Deceased\n\n${txt}`;
-  }
-  navigator.clipboard.writeText(txt).then(()=>{
-    const btns=document.querySelectorAll(`[data-copy-tid="${tid}"]`);
-    btns.forEach(b=>{const orig=b.textContent;b.textContent='Copied';setTimeout(()=>b.textContent=orig,2000);});
-  });
-}
-function bankStep0Edit(tid){setWFStep(tid,0);}
-function bankStep2Confirm(tid){addTrace(tid,'verify','Verified','Contact information confirmed by executor');setWFStep(tid,2);}
-
-// ── TAX FILE PARSING ──
-// Called when user uploads a tax/bank file on the upload screen
-async function parseTaxFile(fileContent,fileName){
-  addTrace('global','action','Tax scan','Scanning uploaded document for financial accounts…');
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are an estate specialist analyzing a tax return or bank statement. Extract all financial institutions, account types, and any relevant identifiers. Format as a clear list. Be concise. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`File: ${fileName}\nEstate context: Deceased is ${A.name||'unknown'}, state ${A.state||'unknown'}.\n\nBased on a typical tax return or bank statement for this person, list the likely financial institutions and account types that would appear. Include:\n- Banks and credit unions (with account types)\n- Investment accounts (401k, IRA, brokerage)\n- Life insurance premium payers\n- Pension or annuity sources\n- Any employer names visible\n\nFormat as a simple bulleted list.`}]});
-    const d=await r.json();
-    const result=d.content?.[0]?.text||'';
-    window._taxParsed=result;
-    window._taxAccounts=result;
-    addTrace('global','verify','Scan complete','Accounts identified from document. Pre-filling bank workflow.');
-    // Show a banner on the upload screen if it exists
-    const banner=document.getElementById('tax-scan-result');
-    if(banner){banner.style.display='block';banner.textContent='Accounts found: '+result.split('\n').slice(0,3).join(' · ')+'…';}
-    return result;
-  }catch(e){
-    console.error('Tax parse error:',e);
-    return null;
-  }
-}
-
-// ── PRE-FILL FORMS FROM TAX DATA ──
-function preFillFromTax(){
-  if(!window._taxParsed)return;
-  // Extract bank names from parsed data and store for bank workflow pre-fill
-  const lines=window._taxParsed.split('\n').filter(l=>l.trim());
-  window._taxBankNames=lines.map(l=>l.replace(/^[-*•]\s*/,'').split('(')[0].trim()).filter(Boolean);
-}
-
-function getPreFilledBanks(){
-  return window._taxBankNames||[];
-}
-async function bankStep3Draft(tid){
-  const acctNum=document.getElementById('bank-acct-num')?.value||'';
-  const context=document.getElementById('bank-context')?.value||'';
-  getWF(tid).data.acctNum=acctNum;
-  getWF(tid).data.context=context;
-  addTrace(tid,'step','Step 3','Drafting notification letter for '+getWF(tid).data.bankName);
-  getWF(tid).draftStreaming=true;
-  getWF(tid).draft='';
-  setWFStep(tid,3);
-  await delay(60);
-  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const taxCtx=window._taxParsed?`\nFinancial context from uploaded tax documents: ${window._taxParsed}`:'';
-  const formCtx=window._taxAccounts?`\nAccounts identified from tax scan: ${window._taxAccounts}`:'';
-  const payload={bankName:getWF(tid).data.bankName,acctType:getWF(tid).data.acctType||'',acctNum,context,notes:taskNotes[tid]||'',taxContext:taxCtx,formContext:formCtx,information:{deceasedName:A.name||'',executorRelationship:A.rel||'',state:A.state||''}};
-  let txt='';
-  try{
-    const r=await fetch(orchestrateBankUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    if(!r.ok||!r.body)throw new Error('orchestrate HTTP '+r.status);
-    const reader=r.body.getReader(),dec=new TextDecoder();
-    let buf='';
-    while(true){
-      const{done:d,value}=await reader.read();if(d)break;
-      buf+=dec.decode(value,{stream:true});
-      let sep;
-      while((sep=buf.indexOf('\n\n'))>=0){
-        const chunk=buf.slice(0,sep);buf=buf.slice(sep+2);
-        const line=chunk.split('\n').find(l=>l.startsWith('data: '));if(!line)continue;
-        try{
-          const ev=JSON.parse(line.slice(6));
-          if(ev.type==='trace')addTrace(tid,ev.traceType,ev.label,ev.text);
-          if(ev.type==='draft_delta'){txt+=ev.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}
-          if(ev.type==='done'&&ev.fullDraft)txt=ev.fullDraft;
-        }catch(_){/* ignore */}
-      }
-    }
-    getWF(tid).draft=txt;
-    setDraft(tid,txt);
-    getWF(tid).draftStreaming=false;
-    if(!txt.trim())throw new Error('empty draft');
-    setWFStep(tid,3);
-    scheduleSave();
-  }catch(e){
-    console.warn('Orchestrator unavailable, using proxy stream',e);
-    await bankStep3DraftDirect(tid,acctNum,context,today,taxCtx,formCtx);
-  }
-}
-async function bankStep3DraftDirect(tid,acctNum,context,today,taxCtx,formCtx){
-  const info=findBankContact(getWF(tid).data.bankName);
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft a bank estate notification letter.
-Bank: ${info.name}
-Department: ${info.dept}
-Account type: ${getWF(tid).data.acctType||'not specified'}
-Account last 4 digits: ${acctNum?'ending in '+acctNum:'not specified'}
-Context: ${context||'none'}
-Deceased: ${A.name}
-State: ${A.state}
-Executor: ${A.rel}
-Date: ${today}
-Additional notes: ${taskNotes[tid]||'none'}${taxCtx}${formCtx}`}]});
-    const reader=r.body.getReader(),dec=new TextDecoder();
-    let txt='';
-    while(true){
-      const{done:d,value}=await reader.read();if(d)break;
-      for(const line of dec.decode(value).split('\n')){
-        if(!line.startsWith('data: '))continue;
-        const raw=line.slice(6);if(raw==='[DONE]')continue;
-        try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}}catch(_){}
-      }
-    }
-    getWF(tid).draft=txt;
-    setDraft(tid,txt);
-    getWF(tid).draftStreaming=false;
-    addTrace(tid,'action','Communication agent','Draft complete (direct proxy).');
-    addTrace(tid,'verify','Verify agent','Review draft locally before sending.');
-    setWFStep(tid,3);
-    scheduleSave();
-  }catch(err){
-    console.error('bankStep3Draft error:',err);
-    getWF(tid).draftStreaming=false;
-    getWF(tid).draft='Error generating letter. Start the API server (see server/README) or check ANTHROPIC_API_KEY.';
-    setWFStep(tid,3);
-  }
-}
-async function redraftBank(tid){getWF(tid).draft='';setDraft(tid,'');await bankStep3Draft(tid);}
-function bankStep4Review(tid){addTrace(tid,'verify','Privacy check',checkSensitivity(getWF(tid).draft||'').length?'Issues found and flagged':'No sensitive information detected in letter');setWFStep(tid,4);}
-function bankStep5Send(tid){addTrace(tid,'step','Ready to send','Letter approved. Presenting send options to executor.');setWFStep(tid,5);}
-
-function syncBankInput(tid){
-  const sel=document.getElementById('bank-select-'+tid);
-  const inp=document.getElementById('bank-name-inp');
-  if(sel&&inp&&sel.value&&sel.value!=='Other / not listed')inp.value=sel.value;
-}
-function syncBankSelect(tid){
-  const sel=document.getElementById('bank-select-'+tid);
-  if(sel)sel.value='';
-}
-async function bankStep1Find(tid){
-  let bankName=(document.getElementById('bank-name-inp')?.value||'').trim();
-  if(!bankName){const sel=document.getElementById('bank-select-'+tid);bankName=(sel?.value||'').trim();}
-  if(!bankName){alert('Please select or type a bank name.');return;}
-  const acctType=(document.getElementById('bank-acct-inp')?.value||'');
-  getWF(tid).data.bankName=bankName;
-  getWF(tid).data.acctType=acctType;
-  addTrace(tid,'step','Step 1','Looking up estate services contact for '+bankName+'…');
-  await delay(500);
-  addTrace(tid,'action','Search agent','Querying knowledge repository for estate services contact');
-  await delay(300);
-  const info=findBankContact(bankName);
-  addTrace(tid,'verify','Contact found',info.name+' — '+info.dept+' — '+info.phone);
-  setWFStep(tid,1);
-}
-
-// ── SENSITIVITY CHECK ──
-function checkSensitivity(text){
-  const issues=[];
-  if(/\b\d{3}-\d{2}-\d{4}\b/.test(text))issues.push('a full Social Security Number');
-  if(/\b\d{8,17}\b/.test(text)&&text.toLowerCase().includes('account'))issues.push('a full account number (only last 4 needed)');
-  if(/\b\d{3}-\d{3}-\d{4}\b/.test(text)&&text.toLowerCase().includes('phone')){}
-  return issues;
-}
-
-// ── STREAMING WORKFLOW ──
-const STREAMING_DATA={
-  'Netflix':{icon:'🎬',how:'Sign in at netflix.com, Account, Cancel Membership. Or call 1-866-579-7172.',bere:'Call 1-866-579-7172. Say you are closing an account due to a bereavement. They close same-day.'},
-  'Hulu':{icon:'📺',how:'Sign in at hulu.com, Account, Cancel.',bere:'Call 1-888-265-6650. Mention it is a bereavement closure.'},
-  'Disney+':{icon:'🏰',how:'Account, Billing Details, Cancel.',bere:'Contact support.disneyplus.com for bereavement closure.'},
-  'Amazon':{icon:'📦',how:'amazon.com, Account, Prime Membership, End Membership.',bere:'Call 1-888-280-4331. Mention bereavement. They guide you through account or Prime closure.'},
-  'Spotify':{icon:'🎵',how:'spotify.com, Account, Subscription, Cancel.',bere:'Contact support and mention bereavement. Closes same-day.'},
-  'LinkedIn':{icon:'💼',how:'LinkedIn Settings, Subscriptions, Cancel Premium.',bere:'Search "deceased member" at linkedin.com/help.'},
-  'Apple':{icon:'🍎',how:'iPhone: Settings, your name, Subscriptions.',bere:'Call Apple at 1-800-275-2273. They have a bereavement process.'},
-  'Google':{icon:'🔍',how:'Google Account, manage via myaccount.google.com.',bere:'Contact Google support for deceased account closure.'},
-  'Other':{icon:'📱',how:'Check bank statements for recurring charges. Cancel through each service website.',bere:'Most services handle bereavement closures over the phone or chat. Simply explain the situation.'},
-};
-function matchStreaming(svc){const k=svc.toLowerCase();for(const[key,val] of Object.entries(STREAMING_DATA)){if(k.includes(key.toLowerCase())||key.toLowerCase().includes(k.split(' ')[0]))return val;}return STREAMING_DATA['Other'];}
-
-function streamingWorkflow(t,wf){
-  const digital=A.digital||[];
-  const svcs=digital.filter(d=>d.includes('Netflix')||d.includes('streaming')||d.includes('Hulu')||d.includes('Amazon')||d.includes('Spotify')||d.includes('LinkedIn'));
-  const all=[...svcs];
-  if(!all.length)all.push('Streaming / subscriptions');
-  return `<div style="margin-top:2px">
-    <div class="slbl" style="margin-bottom:8px">Click a service to see how to cancel it</div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      ${all.map(svc=>{
-        const info=matchStreaming(svc);
-        const key=svc.replace(/\s\/\s.*/,'').trim();
-        const isDone=!!(wf.data['done_'+key]);
-        return `<div style="border:1px solid ${isDone?'var(--green)':'var(--border2)'};border-radius:8px;overflow:hidden;background:var(--bg3)">
-          <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;cursor:pointer" onclick="toggleStreamSvc('${t.id}','${key}')">
-            <div style="width:15px;height:15px;border:1.5px solid ${isDone?'var(--green)':'var(--border2)'};border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;background:${isDone?'var(--green)':'transparent'};color:${isDone?'#fff':'transparent'};cursor:pointer" onclick="event.stopPropagation();toggleStreamDone('${t.id}','${key}')">✓</div>
-            <span style="font-size:16px">${info.icon}</span>
-            <span style="font-size:13px;font-weight:500;color:var(--text);flex:1">${key}</span>
-            <span style="font-size:11px;color:var(--text3);transition:transform .2s" id="sarr-${t.id}-${key}">›</span>
-          </div>
-          <div id="sbody-${t.id}-${key}" style="display:none;padding:10px 13px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.75">
-            <p><strong style="color:var(--text)">How to cancel:</strong> ${info.how}</p>
-            <p style="margin-top:7px;background:rgba(212,137,58,0.07);border:1px solid rgba(212,137,58,0.16);border-radius:5px;padding:7px 10px;color:var(--amber)"><strong>For bereavement:</strong> ${info.bere}</p>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-              <button class="sa-btn primary" onclick="draftStreamCancel('${t.id}','${key}')">Prepare cancellation message</button>
-              <button class="sa-btn" style="border-color:var(--green);color:var(--green)" onclick="toggleStreamDone('${t.id}','${key}');event.stopPropagation()">Mark done</button>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-    <div id="stream-draft-area-${t.id}"></div>
-  </div>`;
-}
-function toggleStreamSvc(tid,key){const b=document.getElementById(`sbody-${tid}-${key}`),a=document.getElementById(`sarr-${tid}-${key}`);if(!b)return;const open=b.style.display!=='none';b.style.display=open?'none':'block';if(a)a.style.transform=open?'rotate(0deg)':'rotate(90deg)';}
-function toggleStreamDone(tid,key){const wf=getWF(tid);wf.data['done_'+key]=!wf.data['done_'+key];addTrace(tid,'verify','Service cancelled',key+(wf.data['done_'+key]?' — marked done':' — reopened'));renderWorkflow(selTask);}
-async function draftStreamCancel(tid,svcName){
-  const area=document.getElementById('stream-draft-area-'+tid);
-  if(area)area.innerHTML=`<div class="slbl" style="margin:8px 0 5px">Cancellation message for ${svcName}</div><div class="draft-box streaming" id="sc-draft-${tid}-${svcName}"></div>`;
-  addTrace(tid,'action','Draft','Preparing bereavement cancellation message for '+svcName);
-  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:300,system:'Draft a short, warm bereavement account cancellation message. 3 to 5 sentences. Suitable for email or chat support. No em dashes.',messages:[{role:'user',content:`Service: ${svcName}\nDeceased: ${A.name}\nExecutor: ${A.rel}\nDate: ${today}`}]});
-    const d=await r.json();const txt=d.content[0].text;
-    const el=document.getElementById(`sc-draft-${tid}-${svcName}`);
-    if(el){el.textContent=txt;el.classList.remove('streaming');}
-    addTrace(tid,'verify','Message ready','Cancellation message drafted. Ready to copy and send.');
-  }catch(e){const el=document.getElementById(`sc-draft-${tid}-${svcName}`);if(el){el.textContent='Something went wrong. Please try again.';el.classList.remove('streaming');}}
-}
-
-// ── EMPLOYER WORKFLOW ──
-function employerWorkflow(t,wf){
-  const step=wf.step||0;
-  const steps=[{label:'Company details',status:step>0?'done':step===0?'active':'pending'},{label:'Draft letter',status:step>1?'done':step===1?'active':'pending'},{label:'Review & send',status:step>2?'done':step===2?'active':'pending'}];
-  let body=renderStepTrack(steps);
-  if(step===0){
-    body+=`<div class="step-card active-step">
-      <div class="step-card-hdr"><div class="step-num">1</div><div class="step-card-title">Company and role details</div><span class="step-card-status">Fill in</span></div>
-      <div class="step-card-body">
-        <div class="field-row"><label class="field-lbl">Company name <span>*</span></label><input class="field-inp" id="emp-co-${t.id}" placeholder="Where they worked" value="${wf.data.co||''}"/></div>
-        <div class="field-row"><label class="field-lbl">Their job title (optional)</label><input class="field-inp" id="emp-title-${t.id}" placeholder="e.g. Manager, Teacher, Engineer" value="${wf.data.title||''}"/></div>
-        <div class="step-actions"><button class="sa-btn primary" onclick="empStep1('${t.id}')">Draft HR notification</button></div>
-      </div>
-    </div>`;
-  }
-  if(step>=1){
-    const draft=getDraft(t.id)||wf.draft||'';
-    body+=`<div class="step-card ${step===1?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">${step>1?'✓':'2'}</div><div class="step-card-title">Review the draft letter / form</div><span class="step-card-status">${step>1?'Done':'Review'}</span></div>
-      <div class="step-card-body">
-        ${wf.draftStreaming?`<div class="draft-box streaming" id="draft-stream-${t.id}"></div><div style="font-size:11px;color:var(--text3);margin-top:6px">Drafting…</div>`:''}
-        ${draft&&!wf.draftStreaming?`<div class="draft-box" id="draft-box-${t.id}">${draft}</div>`:''}
-        ${step===1?`<div class="step-actions" id="emp-actions-${t.id}">
-          ${draft&&!wf.draftStreaming?`<button class="sa-btn primary" onclick="empStep2('${t.id}')">This looks good — continue</button>
-          <button class="sa-btn" onclick="empRedraft('${t.id}')">Redraft</button>
-          <button class="sa-btn" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy</button>`:''}
-        </div>`:''}
-      </div>
-    </div>`;
-  }
-  if(step>=2){
-    body+=`<div class="step-card active-step">
-      <div class="step-card-hdr"><div class="step-num">3</div><div class="step-card-title">Send via your email</div><span class="step-card-status">Ready</span></div>
-      <div class="step-card-body">
-        <div class="email-prompt">
-          <div class="email-prompt-hint">Copy and send from your personal email to HR at ${wf.data.co||'[Company]'}.</div>
-          <div class="copy-box">Subject: Estate Notification — ${A.name||'[Name]'} — Employee Deceased</div>
-          <div class="step-actions"><button class="sa-btn primary" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy letter</button><button class="sa-btn" onclick="togDone('${t.id}')">Mark complete</button></div>
-        </div>
-      </div>
-    </div>`;
-  }
-  return body;
-}
-async function empStep1(tid){
-  const co=(document.getElementById('emp-co-'+tid)?.value||'').trim();if(!co)return;
-  const title=document.getElementById('emp-title-'+tid)?.value||'';
-  getWF(tid).data.co=co;getWF(tid).data.title=title;
-  addTrace(tid,'step','Step 1','Drafting HR notification for '+co);
-  getWF(tid).draftStreaming=true;setWFStep(tid,1);
-  await delay(60);
-  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. Use [brackets] for unknowns. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor: ${A.rel}\nDate: ${today}`}]});
-    const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
-    const el=document.getElementById('draft-stream-'+tid);
-    while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;if(el)el.textContent=txt;}}catch(e){}}}
-    getWF(tid).draft=txt;setDraft(tid,txt);getWF(tid).draftStreaming=false;
-    addTrace(tid,'action','Draft complete','HR letter ready. Checking for sensitive data.');
-    // Update the draft box and show confirm buttons without full re-render
-    const streamEl=document.getElementById('draft-stream-'+tid);
-    if(streamEl){streamEl.classList.remove('streaming');streamEl.id='draft-box-'+tid;}
-    const actEl=document.getElementById('emp-actions-'+tid);
-    if(actEl){actEl.innerHTML=`<button class="sa-btn primary" onclick="empStep2('${tid}')">This looks good — continue</button><button class="sa-btn" onclick="empRedraft('${tid}')">Redraft</button><button class="sa-btn" data-copy-tid="${tid}" onclick="copyDraftFor('${tid}')">Copy</button>`;}
-    else{setWFStep(tid,1);}
-  }catch(e){getWF(tid).draftStreaming=false;setWFStep(tid,1);}
-}
-async function empRedraft(tid){getWF(tid).draft='';setDraft(tid,'');await empStep1(tid);}
-function empStep2(tid){addTrace(tid,'verify','Approved','HR letter approved by executor. Ready to send.');setWFStep(tid,2);}
-
-// ── SSA WORKFLOW ──
-function ssaWorkflow(t,wf){
-  const hasSurvivorSpouse=(A.survivors||[]).some(s=>s.includes('Spouse'));
-  const hasSurvivorChild=(A.survivors||[]).some(s=>s.includes('Children under 18'));
-  return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:2px">
-    <div class="slbl" style="margin-bottom:4px">Call 1-800-772-1213, Monday to Friday, 8am to 7pm local time</div>
-    ${makeSubCard(t.id,'ssa_report','📞','Report the death',`<p>Tell the representative you are calling to report a death and stop benefit payments. Have the Social Security number of the deceased ready.</p><p style="margin-top:6px;color:var(--amber);font-size:11px">Any benefit payment received after the date of death must be returned.</p>`)}
-    ${makeSubCard(t.id,'ssa_lump','💰','Request the $255 lump-sum death payment',`<p>A one-time payment of $255 may be available to a surviving spouse or dependent child in the household. This is not automatic — ask for it specifically during the call.</p>`)}
-    ${hasSurvivorSpouse?makeSubCard(t.id,'ssa_spouse','👫','Apply for monthly spouse survivor benefits',`<p>A surviving spouse may be entitled to monthly payments based on the deceased's earnings record. Ask the representative to open a survivor benefit application during this call.</p>`):''}
-    ${hasSurvivorChild?makeSubCard(t.id,'ssa_child','👶','Apply for monthly child survivor benefits',`<p>Children under 18 (or under 19 if still in high school) may qualify for monthly payments. Bring birth certificates to your SSA appointment.</p>`):''}
-    <div style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="sa-btn primary" onclick="draftGenericLetter('${t.id}','Social Security Administration','Notify SSA and stop benefits')">✦ Draft letter / form</button>
-    </div>
-    <div id="darea-${t.id}"></div>
-  </div>`;
-}
-
-// ── VA WORKFLOW ──
-function vaWorkflow(t,wf){
-  return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:2px">
-    <div class="slbl" style="margin-bottom:4px">Call 1-800-827-1000, Monday to Friday, 8am to 9pm Eastern</div>
-    ${makeSubCard(t.id,'va_dic','💛','Dependency and Indemnity Compensation (DIC)',`<p>Monthly benefit for surviving spouses and dependent children if the veteran died from a service-related condition or had a 100% disability rating.</p>`)}
-    ${makeSubCard(t.id,'va_burial','🪦','Burial and funeral allowance',`<p>Up to $2,000 burial allowance, a grave marker, and an American flag may be available. Apply within 2 years using VA Form 21P-530EZ.</p><div style="margin-top:8px"><a href="https://www.va.gov/burials-memorials/" target="_blank"><button class="sa-btn primary">Apply at VA.gov</button></a></div>`)}
-    ${makeSubCard(t.id,'va_edu','🎓','Education benefits for dependents (Chapter 35)',`<p>Surviving spouses and children may qualify for the Survivors and Dependents Educational Assistance program. Apply at va.gov.</p>`)}
-  </div>`;
-}
-
-// ── LIFE INSURANCE WORKFLOW ──
-function lifeInsWorkflow(t,wf){
-  const step=wf.step||0;
-  const steps=[{label:'Policy details',status:step>0?'done':step===0?'active':'pending'},{label:'Draft claim',status:step>1?'done':step===1?'active':'pending'},{label:'Send',status:step>2?'done':step===2?'active':'pending'}];
-  let body=renderStepTrack(steps);
-  if(step===0){
-    body+=`<div class="step-card active-step">
-      <div class="step-card-hdr"><div class="step-num">1</div><div class="step-card-title">Policy details</div><span class="step-card-status">Fill in</span></div>
-      <div class="step-card-body">
-        <div class="field-row"><label class="field-lbl">Insurance company <span>*</span></label><input class="field-inp" id="ins-co-${t.id}" placeholder="e.g. MetLife, Prudential, New York Life" value="${wf.data.co||''}"/></div>
-        <div class="field-row"><label class="field-lbl">Policy number (if you have it)</label><input class="field-inp" id="ins-pol-${t.id}" placeholder="e.g. ML-123456789" value="${wf.data.pol||''}"/></div>
-        ${window._bankUploaded?'<div class="guard-banner" style="margin-bottom:8px">Tip: Monthly premium payments in the bank statement may show the insurance company name if you are unsure.</div>':''}
-        <div class="step-actions"><button class="sa-btn primary" onclick="insStep1('${t.id}')">Draft claim letter</button></div>
-      </div>
-    </div>`;
-  }
-  if(step>=1){
-    body+=`<div class="step-card ${step===1?'active-step':'done-step'}">
-      <div class="step-card-hdr"><div class="step-num">${step>1?'✓':'2'}</div><div class="step-card-title">Review claim letter</div><span class="step-card-status">${step>1?'Done':'Review'}</span></div>
-      <div class="step-card-body">
-        ${wf.draftStreaming?`<div class="draft-box streaming" id="draft-stream-${t.id}"></div>`:''}
-        ${wf.draft&&!wf.draftStreaming?`<div class="draft-box">${wf.draft}</div>`:''}
-        ${step===1&&wf.draft?`<div class="step-actions"><button class="sa-btn primary" onclick="insStep2('${t.id}')">Looks good</button><button class="sa-btn" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy</button></div>`:''}
-      </div>
-    </div>`;
-  }
-  if(step>=2){
-    body+=`<div class="step-card active-step">
-      <div class="step-card-hdr"><div class="step-num">3</div><div class="step-card-title">Send the claim</div><span class="step-card-status">Ready</span></div>
-      <div class="step-card-body">
-        <p class="step-desc">Send by email or certified mail. Include a certified copy of the death certificate with the letter.</p>
-        <div class="step-actions"><button class="sa-btn primary" data-copy-tid="${t.id}" onclick="copyDraftFor('${t.id}')">Copy letter</button><button class="sa-btn" onclick="togDone('${t.id}')">Mark complete</button></div>
-      </div>
-    </div>`;
-  }
-  return body;
-}
-async function insStep1(tid){
-  const co=(document.getElementById('ins-co-'+tid)?.value||'').trim();if(!co)return;
-  const pol=document.getElementById('ins-pol-'+tid)?.value||'';
-  getWF(tid).data.co=co;getWF(tid).data.pol=pol;
-  addTrace(tid,'step','Step 1','Drafting life insurance claim for '+co);
-  getWF(tid).draftStreaming=true;getWF(tid).draft='';
-  setWFStep(tid,1);
-  await delay(60);
-  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'Draft a professional life insurance death benefit claim letter. Formal but warm. Use [brackets] for unknowns. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Insurer: ${co}\nPolicy: ${pol||'unknown'}\nDeceased: ${A.name}\nBeneficiary or executor: ${A.rel}\nState: ${A.state}\nDate: ${today}`}]});
-    const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
-    while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}}catch(e){}}}
-    getWF(tid).draft=txt;setDraft(tid,txt);getWF(tid).draftStreaming=false;addTrace(tid,'verify','Claim letter ready','Reviewing for sensitive data.');setWFStep(tid,1);
-  }catch(e){getWF(tid).draftStreaming=false;setWFStep(tid,1);}
-}
-function insStep2(tid){addTrace(tid,'verify','Approved','Claim letter approved. Ready to send.');setWFStep(tid,2);}
-
-// ── GENERIC WORKFLOW ──
-function genericWorkflow(t,wf){
-  const needsLawyer=(t.name||'').toLowerCase().includes('probate')||(t.name||'').toLowerCase().includes('out of state')||(t.name||'').toLowerCase().includes('estate attorney');
-  let body=`<div style="margin-top:2px">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <button class="sa-btn primary" onclick="draftGenericLetter('${t.id}','${(t.institution||'').replace(/'/g,"\\'")}','${(t.name||'').replace(/'/g,"\\'")}')">✦ Draft letter / form</button>
-    </div>
-    <div id="darea-${t.id}"></div>
-  </div>`;
-  if(needsLawyer)body+=renderLawyerCard(t);
-  return body;
-}
-
-async function draftGenericLetter(tid,institution,taskName){
-  const t=tasks.find(x=>x.id===tid);if(!t)return;
-  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const el=document.getElementById('darea-'+tid);
-  if(!el)return;
-  el.innerHTML=`<div class="slbl" style="margin:4px 0 5px">Your letter</div><div class="draft-box streaming" id="gen-draft-${tid}"></div><div id="gen-actions-${tid}"></div>`;
-  addTrace(tid,'action','Draft','Preparing letter for '+(institution||taskName));
-  // pull tax context if available
-  const taxCtx=window._taxParsed?`\nFinancial context from uploaded documents: ${window._taxParsed}`:'';
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a warm, professional notification letter. Plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Task: ${taskName}\nInstitution: ${institution||taskName}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor relationship: ${A.rel}\nDate: ${today}\nNotes: ${taskNotes[tid]||'none'}${taxCtx}`}]});
-    const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
-    while(true){
-      const{done:d,value}=await reader.read();if(d)break;
-      for(const line of dec.decode(value).split('\n')){
-        if(!line.startsWith('data: '))continue;
-        const raw=line.slice(6);if(raw==='[DONE]')continue;
-        try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const de=document.getElementById('gen-draft-'+tid);if(de)de.textContent=txt;}}catch(e){}
-      }
-    }
-    const de=document.getElementById('gen-draft-'+tid);if(de)de.classList.remove('streaming');
-    setDraft(tid,txt);
-    const act=document.getElementById('gen-actions-'+tid);
-    if(act)act.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-      <button class="sa-btn primary" data-copy-tid="${tid}" onclick="copyDraftFor('${tid}')">Copy letter</button>
-      <button class="sa-btn" onclick="downloadDraftTxt('${tid}')">Download .txt</button>
-      <button class="sa-btn" onclick="draftGenericLetter('${tid}','${(institution||'').replace(/'/g,"\\'")}','${(taskName||'').replace(/'/g,"\\'")}')" style="border-color:var(--border2)">Redraft</button>
-      <button class="sa-btn" onclick="togDone('${tid}')">Mark complete</button>
-    </div>`;
-    addTrace(tid,'verify','Letter complete','Draft ready. No sensitive data detected.');
-  }catch(e){
-    const de=document.getElementById('gen-draft-'+tid);
-    if(de){de.textContent='Something went wrong. Please try again.';de.classList.remove('streaming');}
-    console.error('draftGenericLetter error:',e);
-  }
-}
-
-// ── LAWYER ESCALATION ──
-function renderLawyerCard(t){
-  const n=(t.name||'').toLowerCase();
-  const isOutOfState=n.includes('out of state')||((A.assets||[]).includes('Home or real estate')&&A.state);
-  const state=A.state||'your state';
-  const cardId='lawyer-card-'+t.id;
-  // Trigger async search after render
-  setTimeout(()=>loadLawyerRecs(t.id,state,isOutOfState),100);
-  return `<div class="lawyer-card" id="${cardId}">
-    <div class="lawyer-title">👔 ${isOutOfState?'This may require attorneys in multiple states':'Professional help is recommended for this step'}</div>
-    <div id="lawyer-recs-${t.id}">
-      <div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;padding:4px 0">
-        <div style="width:10px;height:10px;border:1.5px solid var(--text3);border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0"></div>
-        Finding verified attorneys and CPAs in ${state}…
-      </div>
-    </div>
-  </div>`;
-}
-
-async function loadLawyerRecs(tid,state,isOutOfState){
-  const el=document.getElementById('lawyer-recs-'+tid);
-  if(!el)return;
-  addTrace(tid,'action','Referral search','Finding estate attorneys and CPAs in '+state);
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:500,system:'You are an estate planning specialist. Provide verified, specific referral resources for estate attorneys and CPAs. Be factual and practical. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`State: ${state}
-Situation: Estate administration after a death. ${isOutOfState?'May involve out-of-state real property (ancillary probate).':''}
-
-Provide:
-1. The official state bar attorney referral service for ${state} with their exact website URL
-2. The state CPA society referral service for ${state} with their exact website URL  
-3. One free or low-cost legal aid resource for ${state} with website
-4. 2 to 3 practical tips for what to ask an estate attorney in ${state} specifically (mention any state-specific rules if relevant)
-
-Format as JSON: {"bar":{"name":"...","url":"...","note":"..."},"cpa":{"name":"...","url":"...","note":"..."},"legal_aid":{"name":"...","url":"..."},"tips":["...","..."]}`}]});
-    const d=await r.json();
-    let txt=d.content?.[0]?.text||'';
-    // strip markdown fences
-    txt=txt.replace(/```json|```/g,'').trim();
-    let rec;
-    try{rec=JSON.parse(txt);}catch(e){rec=null;}
-    if(!rec||!rec.bar){
-      el.innerHTML=`<div style="font-size:12px;color:var(--text2);line-height:1.7">
-        <div class="lawyer-row"><span class="ltype">Attorney</span><div>Search for a probate or estate attorney in ${state}. The state bar association at <a href="https://www.americanbar.org/groups/legal_services/flh-home/" target="_blank" style="color:var(--gold)">americanbar.org</a> can refer you to a local attorney. Many offer a free first consultation.</div></div>
-        ${isOutOfState?`<div class="lawyer-row"><span class="ltype">Out of state</span><div>If real property exists in another state, ancillary probate may be required. Your primary estate attorney can refer you to a licensed attorney in that state.</div></div>`:''}
-        <div class="lawyer-row"><span class="ltype">CPA</span><div>A CPA with estate tax experience can handle the final return and advise on estate tax. Search <a href="https://www.cpaverify.org" target="_blank" style="color:var(--gold)">CPAverify.org</a> for licensed CPAs in ${state}.</div></div>
-      </div>`;
-      addTrace(tid,'verify','Referrals ready','General referral links provided for '+state);
-      return;
-    }
-    addTrace(tid,'verify','Referrals found',`Bar referral and CPA society identified for ${state}`);
-    el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px">
-      <div class="lawyer-row"><span class="ltype">Attorney</span><div>
-        <div style="font-weight:500;color:var(--text);margin-bottom:2px">${rec.bar.name||state+' State Bar'}</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.55">${rec.bar.note||'Official state bar attorney referral service'}</div>
-        <a href="${rec.bar.url||'https://www.americanbar.org'}" target="_blank" style="color:var(--gold);font-size:11px">${(rec.bar.url||'americanbar.org').replace('https://','')}</a>
-      </div></div>
-      ${isOutOfState?`<div class="lawyer-row"><span class="ltype">Out of state</span><div style="font-size:12px;color:var(--text2);line-height:1.55">Real property in another state requires ancillary probate. Your primary estate attorney in ${state} can refer you to a licensed attorney in the property's state.</div></div>`:''}
-      <div class="lawyer-row"><span class="ltype">CPA</span><div>
-        <div style="font-weight:500;color:var(--text);margin-bottom:2px">${rec.cpa.name||state+' CPA Society'}</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.55">${rec.cpa.note||'Official CPA referral service'}</div>
-        <a href="${rec.cpa.url||'https://www.cpaverify.org'}" target="_blank" style="color:var(--gold);font-size:11px">${(rec.cpa.url||'cpaverify.org').replace('https://','')}</a>
-      </div></div>
-      ${rec.legal_aid?`<div class="lawyer-row"><span class="ltype" style="background:rgba(106,173,126,0.12);color:var(--green)">Free help</span><div>
-        <div style="font-weight:500;color:var(--text);margin-bottom:2px">${rec.legal_aid.name}</div>
-        <a href="${rec.legal_aid.url}" target="_blank" style="color:var(--gold);font-size:11px">${rec.legal_aid.url.replace('https://','')}</a>
-      </div></div>`:''}
-      ${rec.tips?.length?`<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:6px;padding:10px 12px;margin-top:2px">
-        <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:7px">What to ask your attorney in ${state}</div>
-        ${rec.tips.map(tip=>`<div style="font-size:12px;color:var(--text2);line-height:1.6;display:flex;gap:6px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">›</span>${tip}</div>`).join('')}
-      </div>`:''}
-    </div>`;
-  }catch(e){
-    el.innerHTML=`<div style="font-size:12px;color:var(--text2)">
-      <div class="lawyer-row"><span class="ltype">Attorney</span><div>Search for a probate attorney in ${state} via the <a href="https://www.americanbar.org/groups/legal_services/flh-home/" target="_blank" style="color:var(--gold)">American Bar Association</a> referral service.</div></div>
-      <div class="lawyer-row"><span class="ltype">CPA</span><div>Find a licensed CPA in ${state} at <a href="https://www.cpaverify.org" target="_blank" style="color:var(--gold)">CPAverify.org</a>.</div></div>
-    </div>`;
-    console.error('loadLawyerRecs error:',e);
-  }
-}
-
-// ── HELPERS ──
-function makeSubCard(tid,key,icon,name,bodyHtml){
-  const done=!!(getWF(tid).data['done_'+key]);
-  return `<div style="border:1px solid ${done?'var(--green)':'var(--border2)'};border-radius:8px;overflow:hidden;background:var(--bg3)">
-    <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;cursor:pointer" onclick="toggleSubCard('${tid}','${key}')">
-      <div style="width:15px;height:15px;border:1.5px solid ${done?'var(--green)':'var(--border2)'};border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;background:${done?'var(--green)':'transparent'};color:${done?'#fff':'transparent'};cursor:pointer" onclick="event.stopPropagation();markSubDone('${tid}','${key}')">✓</div>
-      <span style="font-size:15px">${icon}</span>
-      <span style="font-size:13px;font-weight:500;color:var(--text);flex:1">${name}</span>
-      <span style="font-size:11px;color:var(--text3)" id="subarr-${tid}-${key}">›</span>
-    </div>
-    <div id="subbody-${tid}-${key}" style="display:none;padding:10px 13px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.75">${bodyHtml}</div>
-  </div>`;
-}
-function toggleSubCard(tid,key){const b=document.getElementById(`subbody-${tid}-${key}`),a=document.getElementById(`subarr-${tid}-${key}`);if(!b)return;const open=b.style.display!=='none';b.style.display=open?'none':'block';if(a)a.style.transform=open?'rotate(0)':'rotate(90deg)';}
-function markSubDone(tid,key){const wf=getWF(tid);wf.data['done_'+key]=!wf.data['done_'+key];addTrace(tid,'verify','Sub-task',(wf.data['done_'+key]?'Completed: ':'Reopened: ')+key.replace(/_/g,' '));renderWorkflow(selTask);}
-function renderStepTrack(steps){
-  const bubbles=steps.map((s,i)=>`<div class="step-bubble ${s.status}">${s.status==='done'?'✓':i+1}</div>${i<steps.length-1?`<div class="step-line ${s.status==='done'?'done':''}"></div>`:''}`).join('');
-  const labels=steps.map((s,i)=>`<div class="step-lbl-item ${s.status}">${s.label}</div>`).join('');
-  return `<div class="step-track">${bubbles}</div><div class="step-labels">${labels}</div>`;
-}
-function copyText(txt){navigator.clipboard.writeText(txt).then(()=>{const el=event?.target;if(el){const orig=el.textContent;el.textContent='Copied';setTimeout(()=>el.textContent=orig,2000);}});}
-function delay(ms){return new Promise(r=>setTimeout(r,ms));}
-
-// ── CHAT — context-aware ──
-let chatHistory=[],chatOpen=false,chatStreaming=false,chatTaskCtx=null;
-const GUARDRAIL_PATTERNS=['more money','get more','maximize inheritance','hide assets','cheat','how much can i get','take more','claim more than','get more from the will','more from the will','contest the will','disinherit'];
-function updateChatContext(t){
-  chatTaskCtx=t;
-  const bar=document.getElementById('chat-ctx-bar');
-  if(t){bar.textContent='Focused on: '+t.name;bar.classList.add('show');}else{bar.classList.remove('show');}
-  const starters=document.getElementById('chat-starters');
-  if(t&&starters){
-    const n=(t.name||'').toLowerCase();
-    const isBank=n.includes('bank')||n.includes('financial');
-    const isSSA=n.includes('social security');
-    const isVA=n.includes('veteran')||n.includes('va');
-    starters.innerHTML='';
-    if(isBank){
-      ['What documents do I need to bring to the bank?','Can the bank freeze accounts before probate?','What happens to a joint bank account?'].forEach(q=>{const b=document.createElement('button');b.className='chat-starter';b.textContent=q;b.onclick=()=>chatAsk(q);starters.appendChild(b);});
-    } else if(isSSA){
-      ['How long does it take to receive SSA survivor benefits?','Can I collect both my own SSA and a survivor benefit?','What if benefits were already paid after the date of death?'].forEach(q=>{const b=document.createElement('button');b.className='chat-starter';b.textContent=q;b.onclick=()=>chatAsk(q);starters.appendChild(b);});
-    } else if(isVA){
-      ['What is DIC and who qualifies?','How long does a VA burial claim take?','Can children receive VA education benefits?'].forEach(q=>{const b=document.createElement('button');b.className='chat-starter';b.textContent=q;b.onclick=()=>chatAsk(q);starters.appendChild(b);});
-    } else {
-      ['What do I need to include in this letter?','How long does this typically take?','What if they do not respond?'].forEach(q=>{const b=document.createElement('button');b.className='chat-starter';b.textContent=q;b.onclick=()=>chatAsk(q);starters.appendChild(b);});
-    }
-  }
-}
-function toggleChat(){chatOpen=!chatOpen;document.getElementById('chat-panel').classList.toggle('open',chatOpen);document.getElementById('chat-fab').classList.toggle('open',chatOpen);document.getElementById('chat-fab').textContent=chatOpen?'✕':'💬';if(chatOpen)setTimeout(()=>document.getElementById('chat-input').focus(),200);}
-function chatAsk(q){document.getElementById('chat-starters').style.display='none';document.getElementById('chat-input').value=q;sendChat();}
-async function sendChat(){
-  const input=document.getElementById('chat-input');const q=(input.value||'').trim();if(!q||chatStreaming)return;
-  input.value='';document.getElementById('chat-starters').style.display='none';
-  const msgs=document.getElementById('chat-msgs');
-  const uEl=document.createElement('div');uEl.className='chat-msg user';uEl.textContent=q;msgs.appendChild(uEl);msgs.scrollTop=msgs.scrollHeight;
-  const aEl=document.createElement('div');aEl.className='chat-msg ai streaming';msgs.appendChild(aEl);msgs.scrollTop=msgs.scrollHeight;
-  chatHistory.push({role:'user',content:q});chatStreaming=true;document.getElementById('chat-send').disabled=true;
-
-  // GUARDRAIL
-  const lower=q.toLowerCase();
-  const triggered=GUARDRAIL_PATTERNS.some(p=>lower.includes(p));
-  if(triggered){
-    await delay(600);
-    const guard="That is a question I am not able to help with directly. My role is to help you handle the estate properly and legally, making sure everything is handled with integrity. If you have concerns about the will or asset distribution, an estate attorney is the right person to speak with. Would you like help finding one, or shall we move on to the next task?";
-    aEl.textContent=guard;aEl.classList.remove('streaming');chatHistory.push({role:'assistant',content:guard});chatStreaming=false;document.getElementById('chat-send').disabled=false;
-    if(selTask)addTrace(selTask.id,'warn','Guardrail','Question redirected. Guided back to task workflow.');
-    return;
-  }
-
-  const taskCtx=chatTaskCtx?`Current task: "${chatTaskCtx.name}" (${chatTaskCtx.institution||chatTaskCtx.category}).`:'';
-  const ctx=`Estate: ${A.name||'unknown'}, ${A.rel||'unknown'}, ${A.state||'unknown'}. Assets: ${(A.assets||[]).join(', ')||'unknown'}. Benefits: ${(A.benefits||[]).join(', ')||'unknown'}. Survivors: ${(A.survivors||[]).join(', ')||'none'}. ${taskCtx}`;
-  try{
-    const r=await anthropicFetch({model:'claude-sonnet-4-20250514',max_tokens:400,stream:true,system:`You are a compassionate estate specialist. Warm, clear, brief. 2 to 4 sentences unless more is needed. If someone is currently working on a task, answer in the context of that task specifically. Do not use em dashes. Do not mention artificial intelligence. ${ctx}`,messages:chatHistory});
-    const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
-    while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;aEl.textContent=txt;msgs.scrollTop=msgs.scrollHeight;}}catch(e){}}}
-    aEl.classList.remove('streaming');chatHistory.push({role:'assistant',content:txt});
-  }catch(e){aEl.textContent='Something went wrong. Please try again.';aEl.classList.remove('streaming');}
-  chatStreaming=false;document.getElementById('chat-send').disabled=false;
-}
-
-// ── FALLBACK ──
-function fallback(){return[
-  {id:'f0',category:'Government and Legal',name:'Obtain certified death certificates',description:'You will need 10 to 15 certified copies. Almost every step on this checklist requires one.',urgency:'immediate',institution:'County Vital Records'},
-  {id:'f1',category:'Government and Legal',name:'Report the death to Social Security',description:'Call 1-800-772-1213 to stop benefit payments and ask about survivor benefits.',urgency:'immediate',institution:'Social Security Administration'},
-  {id:'f2',category:'Government and Legal',name:'File for probate if required',description:'Required if the estate includes real property or accounts without named beneficiaries.',urgency:'immediate',institution:'Probate Court'},
-  {id:'f3',category:'Government and Legal',name:'Notify the three credit bureaus',description:'Contact Equifax, Experian, and TransUnion to place a deceased alert and prevent fraud.',urgency:'soon',institution:'Credit Bureaus'},
-  {id:'f4',category:'Financial Accounts',name:'Notify financial accounts and institutions',description:'Notify each bank, investment account, and retirement account.',urgency:'immediate',institution:'Banks and Financial Institutions'},
-  {id:'f5',category:'Financial Accounts',name:'Claim life insurance policies',description:'Contact each insurer to file a death claim.',urgency:'soon',institution:'Life Insurance Companies'},
-  {id:'f6',category:'Financial Accounts',name:'Cancel credit cards and settle balances',description:'Notify each credit card company. The estate is responsible for outstanding balances.',urgency:'soon',institution:'Credit Card Companies'},
-  {id:'f7',category:'Property and Insurance',name:'Notify homeowners or renters insurance',description:'Update or transfer the policy. An unoccupied home may lose coverage within 30 to 60 days.',urgency:'immediate',institution:'Homeowners Insurance'},
-  {id:'f8',category:'Digital and Subscriptions',name:'Cancel streaming and online subscriptions',description:'Cancel all active subscriptions to stop ongoing charges.',urgency:'soon',institution:'Streaming Services'},
-  {id:'f9',category:'Notifications',name:'Notify the employer and HR department',description:'Stop payroll, collect final paycheck, and ask about life insurance, pension, and COBRA.',urgency:'immediate',institution:'Employer HR'},
-  {id:'f10',category:'Government and Legal',name:'File the final tax returns',description:'File Form 1040 for the year of death. An estate income return may also be required.',urgency:'later',institution:'Internal Revenue Service'},
-  {id:'f11',category:'Survivor Benefits',name:'Apply for Social Security survivor benefits',description:'A surviving spouse and children under 18 may qualify for monthly payments. A one-time $255 payment may also be available.',urgency:'soon',institution:'Social Security Administration'},
-  {id:'f12',category:'Survivor Benefits',name:'Claim employer group life insurance and COBRA',description:'Contact HR for group life insurance and ensure dependents can elect COBRA health coverage within 60 days.',urgency:'immediate',institution:'Employer HR'},
-];}
-document.addEventListener('DOMContentLoaded',function(){
-  loadPassageState();
-  if(A.dateOfDeath){const e=document.getElementById('date-of-death-inp');if(e)e.value=A.dateOfDeath;trackerState.dateOfDeath=A.dateOfDeath;}
-  if(A.deathCounty){const e=document.getElementById('death-county-inp');if(e)e.value=A.deathCounty;}
-  if(tasks.length&&A.name){
-    go('s-dashboard');
-    renderDash();
-    refreshFiles('cert');
-    refreshFiles('bank');
-  }
-});
 </script>
+
+<script src="js/state.js"></script>
+<script src="js/guardrails.js"></script>
+<script src="js/agents.js"></script>
+<script src="js/knowledge.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/onboarding.js"></script>
+<script src="js/tasks.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/workflows/bank.js"></script>
+<script src="js/workflows/other.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

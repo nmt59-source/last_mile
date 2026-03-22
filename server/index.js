@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { findBankContact } from './lib/knowledge.js';
-import { shouldBlockUserMessage } from './lib/guardrails.js';
+import { shouldBlockUserMessage, checkDraftSensitivity, COMM_AGENT_PII_RULE } from './lib/guardrails.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -62,6 +62,7 @@ app.post('/api/orchestrate/bank-draft', async (req, res) => {
     return;
   }
   const body = req.body || {};
+  // Guardrail 1 (General Assistant) — reject out-of-scope requests before any agent runs
   const lastUserChat = body.lastUserMessage || '';
   if (shouldBlockUserMessage(lastUserChat)) {
     res.status(400).json({ error: 'blocked', message: 'Request blocked by policy' });
@@ -95,11 +96,13 @@ app.post('/api/orchestrate/bank-draft', async (req, res) => {
     label: 'General assistant',
     text: `Coordinating bank notification for ${bankName || 'institution'}.`,
   });
+  const webHref = info.web && !info.web.startsWith('Search') ? info.web : null;
   send({
     type: 'trace',
     traceType: 'action',
     label: 'Search agent',
-    text: `Knowledge repository: matched ${info.name} — ${info.dept}. Reference: estate services directory (no web crawl; curated allowlist).`,
+    text: `Knowledge repository: matched ${info.name} — ${info.dept}. Reference: curated institution directory (no live web crawl).`,
+    href: webHref,
   });
 
   const deceased = information.deceasedName || '';
@@ -137,7 +140,8 @@ Additional notes: ${notes || 'none'}${taxContext}${formContext}`;
         max_tokens: 800,
         stream: true,
         system:
-          'You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',
+          COMM_AGENT_PII_RULE +
+          ' You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use plain language. Formal but kind. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',
         messages: [{ role: 'user', content: userContent }],
       }),
     });
@@ -149,14 +153,15 @@ Additional notes: ${notes || 'none'}${taxContext}${formContext}`;
       return;
     }
 
-    send({
-      type: 'trace',
-      traceType: 'action',
-      label: 'Communication agent',
-      text: 'Streaming public-facing letter draft…',
-    });
+  // Guardrail 3 (Communication Agent) — PII prohibition is enforced via system prompt
+  send({
+    type: 'trace',
+    traceType: 'action',
+    label: 'Communication agent',
+    text: 'Drafting letter. PII guardrail active: SSNs, full account numbers, and dates of birth are prohibited from output.',
+  });
 
-    const reader = upstream.body.getReader();
+  const reader = upstream.body.getReader();
     const dec = new TextDecoder();
     let buffer = '';
     while (true) {
@@ -188,30 +193,49 @@ Additional notes: ${notes || 'none'}${taxContext}${formContext}`;
     return;
   }
 
+  // Guardrail 2 (Verify Agent) — validate draft against information repo and run full sensitivity check
   send({
     type: 'trace',
     traceType: 'verify',
     label: 'Verify agent',
-    text: 'Checking draft against information repository (names, placeholders, sensitive patterns)…',
+    text: 'Checking draft against information repository: names, placeholders, sensitive data patterns…',
   });
 
   const issues = [];
+
+  // Cross-reference: deceased name from information repository
   if (deceased && draft && !draft.toLowerCase().includes(deceased.toLowerCase().split(' ')[0])) {
-    issues.push('Deceased first name may be missing or mismatched');
+    issues.push({ msg: 'Deceased first name may be missing or mismatched — cross-reference with intake', sev: 'warn' });
   }
-  if (/\b\d{3}-\d{2}-\d{4}\b/.test(draft)) issues.push('Possible full SSN in draft');
-  if (/\b\d{8,17}\b/.test(draft) && draft.toLowerCase().includes('account')) {
-    issues.push('Possible full account number; last 4 only');
+
+  // Placeholder check: warn if [brackets] remain for key fields
+  const unresolvedBrackets = (draft.match(/\[(?!REDACTED)[^\]]{2,40}\]/g) || []);
+  if (unresolvedBrackets.length > 0) {
+    issues.push({ msg: `Unresolved placeholder(s): ${unresolvedBrackets.slice(0, 3).join(', ')} — fill in before sending`, sev: 'warn' });
+  }
+
+  // Guardrail 1 — run full PII/sensitivity scan on the output
+  const sensitivityIssues = checkDraftSensitivity(draft);
+  issues.push(...sensitivityIssues);
+
+  const errors = issues.filter((i) => i.sev === 'error');
+  const warns = issues.filter((i) => i.sev === 'warn');
+
+  let verifyText = '';
+  if (errors.length > 0) {
+    verifyText = `Errors found — must fix before sending: ${errors.map((i) => i.msg).join('; ')}`;
+  } else if (warns.length > 0) {
+    verifyText = `Warnings: ${warns.map((i) => i.msg).join('; ')}. Human review required.`;
+  } else {
+    verifyText = 'All automated checks passed. Human review and executor confirmation still required before sending.';
   }
 
   send({
     type: 'trace',
     traceType: 'verify',
     label: 'Verify agent',
-    text:
-      issues.length > 0
-        ? `Review needed: ${issues.join('; ')}`
-        : 'Passed automated checks. Human review still required before sending.',
+    text: verifyText,
+    verifyIssues: issues,
   });
 
   send({ type: 'done', fullDraft: draft });

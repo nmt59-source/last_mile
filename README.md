@@ -23,7 +23,21 @@ After a brief intake (relationship, state, assets, digital accounts, benefits), 
 ## Repository structure
 
 ```
-passage-v2.html         # Full browser app (one file, no build step)
+passage-v2.html         # App shell — HTML + CSS only, no inline JS
+js/
+  state.js              # Global state and localStorage persistence
+  guardrails.js         # Client-side PII detection and scope guardrails
+  knowledge.js          # Curated legal citations, official URLs, task options
+  utils.js              # Shared helpers (AI draft disclaimer, delay, etc.)
+  agents.js             # Agent trace rendering, send modal, toast notifications
+  tasks.js              # Deterministic task generation + AI enrichment
+  onboarding.js         # Intake flow, document upload, PII obfuscation
+  chat.js               # Context-aware chat panel with source citation parsing
+  render.js             # Workflow dispatcher, options panel, link chips
+  main.js               # App entry point
+  workflows/
+    bank.js             # Multi-step bank notification workflow
+    other.js            # Employer, SSA, VA, life insurance, streaming, generic workflows
 server/
   index.js              # Express API: Anthropic proxy + bank orchestration
   knowledge/banks.json  # Institution contact knowledge base
@@ -32,36 +46,44 @@ server/
   package.json
   .env.example
   README.md             # Server-specific setup notes
-IMPLEMENTATION_GUIDE.md # Full architecture, flow, and functionality reference
-V2_BACKLOG.md           # Deferred V2 features
 ```
 
 ---
 
-## Quick start
+## Running locally
 
-### Frontend only (no backend)
+You need two terminals running at the same time.
 
-Open `passage-v2.html` in a browser. The app will call `http://localhost:8787` by default for AI features — run the server (below) before generating tasks or drafting letters.
+**Terminal 1 — Backend (API proxy, port 8787):**
 
-To point the frontend at a different URL without editing the HTML, add this before the page loads:
+```bash
+cd server
+cp .env.example .env          # first time only
+# open .env and set ANTHROPIC_API_KEY=sk-ant-...
+npm install                   # first time only
+npm run dev
+```
+
+**Terminal 2 — Frontend (static file server):**
+
+```bash
+cd /path/to/yel               # the project root (where passage-v2.html lives)
+npx serve .
+```
+
+Then open `http://localhost:3000/passage-v2.html` in your browser.
+
+**To reset and start fresh from onboarding**, run this in the browser console:
+
+```javascript
+localStorage.clear(); location.reload();
+```
+
+To point the frontend at a different API URL without editing source files, add this before the script tags load:
 
 ```html
 <script>window.PASSAGE_API_BASE = 'https://your-api.example.com';</script>
 ```
-
-### Backend (recommended)
-
-```bash
-cd server
-cp .env.example .env
-# Set ANTHROPIC_API_KEY in .env
-npm install
-npm start
-# Server runs on http://localhost:8787
-```
-
-Then open `passage-v2.html` — all model calls route through the server. The API key is never sent to the browser.
 
 ---
 
