@@ -1,6 +1,6 @@
-# Passage — Estate Guide
+# LastMile — Estate Guide
 
-Passage is a compassionate, AI-powered estate administration guide that walks executors and family members through every step of settling a loved one's estate. It generates a personalized, prioritized task list, drafts letters and notifications, and tracks progress — all in a private, session-based interface.
+LastMile is a compassionate, AI-powered estate administration guide that walks executors and family members through every step of settling a loved one's estate. It generates a personalized, prioritized task list, drafts letters and notifications, and tracks progress — all in a private, session-based interface.
 
 Built at **EmpireHacks 2026** (Cornell Tech × Columbia × Gona Semiconductors) using the Anthropic API.
 
