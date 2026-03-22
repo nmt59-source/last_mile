@@ -13,20 +13,53 @@ function addTrace(tid, type, label, text, href, ruleRef) {
 
 function renderTrace(tid) {
   _renderInlineStrip(tid);
+  _renderLivePanel(tid);
   _renderTraceTab();
 }
 
 // Compact pill strip rendered inside the task's workflow panel.
-// Shows only step labels — no detail text, no hrefs, no rule refs.
 function _renderInlineStrip(tid) {
   const el = document.getElementById('task-trace-' + tid);
   if (!el) return;
-  const events = (traceEvents[tid] || []);
+  const events = traceEvents[tid] || [];
   if (!events.length) { el.innerHTML = ''; return; }
   el.innerHTML = events.map(e => {
     const icon = e.type === 'verify' ? '✓' : e.type === 'warn' ? '⚠' : '›';
     return `<span class="trace-pill ${e.type}">${icon} ${e.label}</span>`;
   }).join('');
+}
+
+// Simple live status panel on the right of the Checklist tab.
+// Shows the last few events as readable status lines.
+function _renderLivePanel(tid) {
+  const col = document.getElementById('live-trace-col');
+  const feed = document.getElementById('live-trace-feed');
+  if (!col || !feed) return;
+  const events = traceEvents[tid] || [];
+  if (!events.length) { col.style.display = 'none'; return; }
+  col.style.display = 'flex';
+  // Show last 5 events, most recent on top
+  const recent = [...events].reverse().slice(0, 5);
+  const isLast = (i) => i === 0; // most recent = index 0 after reverse
+  feed.innerHTML = recent.map((e, i) => {
+    const dotCls = isLast(i) && e.type !== 'verify' && e.type !== 'warn' ? 'active' : e.type === 'verify' ? 'done' : e.type === 'warn' ? 'warn' : '';
+    const msg = _simplifyLabel(e.label, e.type);
+    return `<div class="lt-item"><div class="lt-dot ${dotCls}"></div><span>${msg}</span></div>`;
+  }).join('');
+}
+
+// Map trace labels to short, plain-English status lines.
+function _simplifyLabel(label, type) {
+  if (type === 'verify') return '✓ ' + label;
+  if (type === 'warn') return label;
+  const lower = label.toLowerCase();
+  if (lower.includes('drafting') || lower.includes('draft')) return 'Drafting your letter…';
+  if (lower.includes('finding') || lower.includes('looking')) return 'Pulling information…';
+  if (lower.includes('getting started') || lower.includes('preparing')) return 'Thinking…';
+  if (lower.includes('enriching') || lower.includes('descriptions')) return 'Enriching task details…';
+  if (lower.includes('complexity') || lower.includes('assessing')) return 'Assessing complexity…';
+  if (lower.includes('lookup') || lower.includes('contact')) return 'Looking up contact info…';
+  return label;
 }
 
 // Full grouped view in the Agent Trace tab — all fields, citation chips, rule refs.
