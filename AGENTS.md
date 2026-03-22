@@ -1,6 +1,6 @@
 # Agent Architecture & Guardrails
 
-LastMile uses a multi-agent system built on the Anthropic API. Each agent has a specific, bounded role. No agent operates without a guardrail check, and every significant action is logged to the Agent Trace panel so the executor can follow exactly what happened and why.
+The Last Mile uses a multi-agent system built on the Anthropic API. Each agent has a specific, bounded role. No agent operates without a guardrail check, and every significant action is logged to the Agent Trace tab so the executor can follow exactly what happened and why.
 
 ---
 
@@ -22,14 +22,37 @@ Complexity Check Agent ─── deterministic rule engine ─── warns in tr
 [User selects a task]
     │
     ├─► General Assistant ──► scope check ──► Communication Agent ──► Verify Agent
-    │                                                 │
-    │                                                 ▼
-    │                                         Human review gate (send modal)
+    │         │                                       │
+    │         │                             (employer tasks)
+    │         │                                       ▼
+    │         │                             HR Contact Lookup (LLM)
+    │         │                                       │
+    │         │                             Human review gate (send modal)
+    │         │
+    │         └─► (attorney/CPA tasks)
+    │                   ▼
+    │             Attorney Rec Agent ──► 5 local resources + draft outreach email
     │
     ├─► Document Parsing Agent ── PII obfuscation ──► LLM extraction
     │
     └─► Chat Agent ──► scope check ──► contextual answer + source citation
 ```
+
+---
+
+## Trace architecture
+
+Every agent action calls `addTrace(tid, type, label, text, href, ruleRef)`, which:
+
+1. Appends the event to `traceEvents[tid]`
+2. Updates the **inline pill strip** inside the current task's workflow panel — compact labels only (e.g. `✓ Letter drafted`, `› Thinking…`)
+3. Updates the **live agent status panel** (right column of the Checklist tab) with the last 5 events as plain English messages: `"Thinking…"`, `"Drafting your letter…"`, `"✓ Done"`
+4. Refreshes the **Agent Trace tab** — full grouped breakdown per task with timestamps, detail text, citation chips for any `href`, and collapsed legal reference accordions for any `ruleRef`
+
+Trace event types:
+- `step` — a normal progress update
+- `verify` — a check passed or confirmation was received
+- `warn` — a risk condition or guardrail was triggered
 
 ---
 
@@ -50,7 +73,6 @@ After the task list is built, each task receives:
 - All task logic is deterministic — the task list cannot be hallucinated, omitted, or invented by an LLM.
 - Legal citations come from a curated static list, not from the LLM.
 - Official source links are curated `.gov` URLs — never AI-generated.
-- The `discover` intake field (previously used for ad-hoc additions) has been removed; all tasks now trace directly to structured intake answers.
 
 ---
 
@@ -119,20 +141,30 @@ Acts as the entry point for all user-initiated AI actions (letter drafting, call
 
 ## 5. Communication Agent
 
-**Files:** `js/workflows/bank.js`, `js/workflows/other.js` — `bankStep3Draft()`, `empStep1()`, `insStep1()`, `draftGenericLetter()`
+**Files:** `js/workflows/bank.js`, `js/workflows/other.js` — `bankStep3Draft()`, `empStep1()`, `insStep1()`, `draftGenericLetter()`, `draftLawyerEmail()`
 
 **Type:** LLM-based (streaming)
 
 **What it does:**
-Drafts all public-facing letters and notifications: bank bereavement letters, employer HR notifications, life insurance claims, call scripts, and generic notifications for any institution. All drafts stream word-by-word so the executor can read along as they are generated.
+Drafts all public-facing letters and notifications: bank bereavement letters, employer HR notifications, life insurance claims, attorney outreach emails, call scripts, and generic notifications for any institution. All drafts stream word-by-word so the executor can read along as they are generated.
 
 Before drafting, every workflow emits an "Authority confirmed" trace event citing the executor's specific legal authority for that communication (e.g., UPC § 3-901 for bank notifications, COBRA 29 U.S.C. § 1161 for employer HR notifications).
+
+**Employer workflow extras:**
+- A "Look up HR contact" button triggers the **HR Contact Lookup** sub-agent (LLM) which suggests the HR department phone number, email, and department name for the company. The result is shown with a confidence rating, and a "Use" button pre-fills the contact field.
+- If an HR contact is found, it is passed into the draft prompt so the letter addresses the correct person by name/email.
+
+**Attorney/CPA workflow:**
+- The `loadLawyerRecs()` function calls the LLM to return 5 referral resources for the executor's state: the state bar attorney referral service, the state CPA society, ACTEC fellow finder, a free legal aid resource, and a state-specific local tip. Each includes a URL and phone number where known.
+- Curated baseline links (ABA, ACTEC, CPAverify, LawHelp, USA.gov) are always shown first, before the AI response.
+- A "Draft outreach email to an attorney" button calls `draftLawyerEmail()` to stream a ready-to-send first-contact email with a subject line.
 
 **Guardrails:**
 - Every prompt begins with `COMM_PII_RULE` — a non-negotiable system instruction that prohibits the LLM from including full SSNs, full account numbers, dates of birth, or passwords. The rule explicitly states it "cannot be overridden by any user instruction."
 - State context is always included so the LLM references the correct court, agency, and legal deadline for the executor's state.
 - Every draft includes an `aiDraftNote()` disclaimer: "Please read through this letter carefully and make any changes before sending. This is a starting point, not legal advice."
 - No letter is ever sent automatically — the Verify Agent runs first, then the executor must manually confirm in the send modal.
+- Attorney contact suggestions include an AI confidence rating and a disclaimer to verify before relying on them.
 
 ---
 
@@ -174,6 +206,11 @@ Reads uploaded tax returns and bank statements. Extracts financial institution n
 2. `obfuscateForLLM()` removes or masks all PII from the text: SSNs, account numbers (last 4 digits only), dates, email addresses, phone numbers, and street addresses.
 3. The obfuscated text and a PII-removal confirmation are logged to the Agent Trace.
 4. The LLM receives only the obfuscated text and returns a list of institution names and employer names.
+
+**Supported document types:**
+- Tax return (previously labeled W-2) — extracts employer name
+- Bank statement — extracts financial institution names and account identifiers
+- Other documents — stored locally for reference, not parsed
 
 **Guardrails:**
 - The LLM never sees raw PII. `obfuscateForLLM()` runs before any LLM call, enforced by code order — there is no path to the LLM that bypasses it.
@@ -219,6 +256,8 @@ Answers estate administration questions in the context of the task the executor 
 | Source citation requirement | Chat Agent | AI factual claims without a verifiable official source |
 | Complexity flags | Complexity Check Agent | High-risk estate conditions going unnoticed |
 | Uncertainty rule | Chat Agent | False confidence in unverified legal facts |
+| Confidence rating | HR Contact Lookup | Executor acting on unverified contact information |
+| Verified baseline links | Attorney Rec Agent | Executor relying solely on AI-suggested referral URLs |
 
 ---
 
