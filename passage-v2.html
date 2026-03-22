@@ -801,14 +801,24 @@ function renderNoteTaker(t){
   const saved=taskNotes[t.id]||'';
   return `<div class="note-taker">
     <div class="note-taker-hdr">
-      <span class="note-taker-lbl">📝 Your notes for this task</span>
-      <span class="note-taker-hint" onclick="toggleNotePrompts('${t.id}')">Suggested fields ▾</span>
+      <span class="note-taker-lbl">🗂 Case log — jot anything as you work through this</span>
+      <span class="note-taker-hint" onclick="toggleNotePrompts('${t.id}')">Quick fields ▾</span>
     </div>
     <div class="note-prompts" id="note-prompts-${t.id}" style="display:none">
       ${prompts.map(p=>`<span class="note-prompt-chip" onclick="appendNote('${t.id}','${p.replace(/'/g,"\\'")}')">+ ${p}</span>`).join('')}
     </div>
-    <textarea id="note-ta-${t.id}" placeholder="Tap a suggested field above, or type freely — contact names, account numbers, dates, anything relevant…" oninput="taskNotes['${t.id}']=this.value">${saved}</textarea>
+    <textarea id="note-ta-${t.id}" placeholder="Who did you speak to? What were you told? What's the next step? Anything you'd want to remember later…" oninput="taskNotes['${t.id}']=this.value">${saved}</textarea>
+    <div style="display:flex;justify-content:flex-end;padding:0 10px 8px">
+      <button class="sa-btn" style="font-size:11px;padding:5px 12px" onclick="saveNote('${t.id}')">Save note</button>
+    </div>
   </div>`;
+}
+function saveNote(tid){
+  const ta=document.getElementById('note-ta-'+tid);
+  if(!ta)return;
+  taskNotes[tid]=ta.value;
+  const btn=event?.target;
+  if(btn){const orig=btn.textContent;btn.textContent='Saved \u2713';btn.style.color='var(--green)';btn.style.borderColor='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.color='';btn.style.borderColor='';},1800);}
 }
 function toggleNotePrompts(tid){const el=document.getElementById('note-prompts-'+tid);if(el)el.style.display=el.style.display==='none'?'flex':'none';}
 function appendNote(tid,field){const ta=document.getElementById('note-ta-'+tid);if(!ta)return;const cur=ta.value;const prefix=cur&&!cur.endsWith('\n')?'\n':'';ta.value=cur+prefix+field+': ';taskNotes[tid]=ta.value;ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
@@ -955,14 +965,15 @@ async function draftFinLetter(tid,idx){
   const info=findBankContact(acc.institution);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'You are a compassionate estate specialist. Draft a professional estate notification letter. Use plain language. Formal but kind. Use [brackets] only for genuinely unknown info. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft estate notification letter.
+    const sig=document.getElementById('sig-inp')?.value||'[Executor Name]';
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'You are a compassionate estate specialist. Draft a professional estate notification letter. Use the exact names provided — do NOT use brackets for deceased or executor name. Use [brackets] only for unknown account details. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft estate notification letter.
 Institution: ${acc.institution}
 Account type: ${acc.type||'not specified'}
-Account last 4: ${acc.accountLast4?'ending in '+acc.accountLast4:'not specified'}
+Account last 4: ${acc.accountLast4?'ending in '+acc.accountLast4:'[unknown]'}
 Required form: ${info.form}
-Deceased: ${A.name}
+Deceased full name: ${A.name||'[Deceased Name]'}
 State: ${A.state}
-Executor: ${A.rel}
+Executor relationship: ${A.rel||'executor'}, signing as: ${sig}
 Date: ${today}
 Notes: ${taskNotes[tid]||'none'}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
@@ -1078,15 +1089,20 @@ function bankWorkflow(t,wf){
   }
 
   if(step>=2){
-    // Pre-fill from tax data if available
     const prefillNote=window._taxAccounts?`<div style="font-size:11px;color:var(--blue);margin-bottom:8px;padding:6px 10px;background:rgba(90,159,212,0.07);border-radius:5px">Fields pre-filled from your tax documents where possible</div>`:'';
+    const info2=findBankContact(wf.data.bankName||'');
     body+=`<div class="step-card ${step===2?'active-step':'done-step'}">
       <div class="step-card-hdr"><div class="step-num">${step>2?'✓':'3'}</div><div class="step-card-title">Account details</div><span class="step-card-status">${step>2?'Done':'Fill in'}</span></div>
-      <div class="step-card-body">
-        ${step===2?`${prefillNote}<div class="field-row"><label class="field-lbl">Account number — last 4 digits only</label><input class="field-inp" id="bank-acct-num" placeholder="e.g. 4242" maxlength="4" value="${wf.data.acctNum||''}"/></div>
-        <div class="field-row"><label class="field-lbl">Additional context (optional)</label><input class="field-inp" id="bank-context" placeholder="e.g. joint account with spouse, online-only account" value="${wf.data.context||''}"/></div>
-        <div class="step-actions"><button class="sa-btn primary" onclick="bankStep3Draft('${t.id}')">Draft the notification letter</button></div>`
-        :`<div style="font-size:12px;color:var(--text2)">Account details saved.</div>`}
+      <div class="step-card-body" style="max-height:none;overflow:visible">
+        ${step===2?`${prefillNote}
+        <div class="field-row"><label class="field-lbl">Account number — last 4 digits only</label><input class="field-inp" id="bank-acct-num" placeholder="e.g. 4242" maxlength="4" style="max-width:120px" value="${wf.data.acctNum||''}"/></div>
+        <div class="field-row"><label class="field-lbl">Executor name (signing this letter)</label><input class="field-inp" id="bank-sig-name" placeholder="Your full legal name" value="${document.getElementById('sig-inp')?.value||''}"/></div>
+        <div class="field-row"><label class="field-lbl">Additional context (optional)</label><textarea class="field-inp" id="bank-context" placeholder="e.g. joint account with spouse, online-only account, found in tax return" style="min-height:60px;resize:vertical">${wf.data.context||''}</textarea></div>
+        <div style="margin-top:6px;padding:8px 10px;background:rgba(90,159,212,0.07);border-radius:5px;font-size:11px;color:var(--blue)">
+          <strong>What to bring to the bank:</strong> Certified death certificate · Your photo ID · Executor documentation (will or Letters Testamentary) · Account statements if available
+        </div>
+        <div class="step-actions" style="margin-top:10px"><button class="sa-btn primary" onclick="bankStep3Draft('${t.id}')">Draft the notification letter</button></div>`
+        :`<div style="font-size:12px;color:var(--text2)">Account details saved. Executor: ${wf.data.sigName||'—'} · Account ending: ${wf.data.acctNum||'—'}</div>`}
       </div>
     </div>`;
   }
@@ -1196,9 +1212,11 @@ function getPreFilledBanks(){
 }
 async function bankStep3Draft(tid){
   const acctNum=document.getElementById('bank-acct-num')?.value||'';
-  const context=document.getElementById('bank-context')?.value||'';
+  const context=(document.getElementById('bank-context')?.value||document.getElementById('bank-context')?.textContent||'');
+  const sigName=document.getElementById('bank-sig-name')?.value||document.getElementById('sig-inp')?.value||'[Executor Name]';
   getWF(tid).data.acctNum=acctNum;
   getWF(tid).data.context=context;
+  getWF(tid).data.sigName=sigName;
   addTrace(tid,'step','Step 3','Drafting notification letter for '+getWF(tid).data.bankName);
   getWF(tid).draftStreaming=true;
   getWF(tid).draft='';
@@ -1211,15 +1229,16 @@ async function bankStep3Draft(tid){
   const taxCtx=window._taxParsed?`\nFinancial context from uploaded tax documents: ${window._taxParsed}`:'';
   const formCtx=window._taxAccounts?`\nAccounts identified from tax scan: ${window._taxAccounts}`:'';
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft a bank estate notification letter.
+    const sig=document.getElementById('sig-inp')?.value||A.executorName||'[Executor Name]';
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a professional, warm bank estate notification letter. Use the exact names provided. Do NOT use brackets for the deceased name or executor name. Use [brackets] only for unknown details like account numbers. Formal but kind. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Draft a bank estate notification letter.
 Bank: ${info.name}
 Department: ${info.dept}
 Account type: ${getWF(tid).data.acctType||'not specified'}
-Account last 4 digits: ${acctNum?'ending in '+acctNum:'not specified'}
+Account last 4 digits: ${acctNum?'ending in '+acctNum:'[unknown — check statements]'}
 Context: ${context||'none'}
-Deceased: ${A.name}
+Deceased full name: ${A.name||'[Deceased Name]'}
 State: ${A.state}
-Executor: ${A.rel}
+Executor relationship: ${A.rel||'executor'}, signing as: ${sig}
 Date: ${today}
 Additional notes: ${taskNotes[tid]||'none'}${taxCtx}${formCtx}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();
@@ -1398,7 +1417,8 @@ async function empStep1(tid){
   await delay(60);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. Use [brackets] for unknowns. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor: ${A.rel}\nDate: ${today}`}]})});
+    const sig=document.getElementById('sig-inp')?.value||'[Executor Name]';
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,stream:true,system:'You are a compassionate estate specialist. Draft a professional HR bereavement email. Use the exact names provided — do NOT use brackets for deceased or executor name. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents. No em dashes.',messages:[{role:'user',content:`Company: ${co}\nJob title: ${title||'not specified'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nState: ${A.state}\nExecutor relationship: ${A.rel||'executor'}, signing as: ${sig}\nDate: ${today}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     const el=document.getElementById('draft-stream-'+tid);
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;if(el)el.textContent=txt;}}catch(e){}}}
@@ -1489,7 +1509,8 @@ async function insStep1(tid){
   await delay(60);
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'Draft a professional life insurance death benefit claim letter. Formal but warm. Use [brackets] for unknowns. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Insurer: ${co}\nPolicy: ${pol||'unknown'}\nDeceased: ${A.name}\nBeneficiary or executor: ${A.rel}\nState: ${A.state}\nDate: ${today}`}]})});
+    const sig=document.getElementById('sig-inp')?.value||'[Executor Name]';
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,stream:true,system:'Draft a professional life insurance death benefit claim letter. Use the exact names provided — do NOT use brackets for deceased or claimant name. Formal but warm. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Insurer: ${co}\nPolicy: ${pol||'[policy number — check policy documents]'}\nDeceased full name: ${A.name||'[Deceased Name]'}\nBeneficiary or executor relationship: ${A.rel||'executor'}, signing as: ${sig}\nState: ${A.state}\nDate: ${today}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     while(true){const{done:d,value}=await reader.read();if(d)break;for(const line of dec.decode(value).split('\n')){if(!line.startsWith('data: '))continue;const raw=line.slice(6);if(raw==='[DONE]')continue;try{const j=JSON.parse(raw);if(j.type==='content_block_delta'&&j.delta?.text){txt+=j.delta.text;const el=document.getElementById('draft-stream-'+tid);if(el)el.textContent=txt;}}catch(e){}}}
     getWF(tid).draft=txt;setDraft(tid,txt);getWF(tid).draftStreaming=false;addTrace(tid,'verify','Claim letter ready','Reviewing for sensitive data.');setWFStep(tid,1);
@@ -1497,17 +1518,118 @@ async function insStep1(tid){
 }
 function insStep2(tid){addTrace(tid,'verify','Approved','Claim letter approved. Ready to send.');setWFStep(tid,2);}
 
+// ── CONTACT INFO DATABASE ──
+const CONTACT_INFO={
+  'social security':     {phone:'1-800-772-1213',hours:'Mon–Fri 8am–7pm local',web:'ssa.gov',email:'N/A — call or visit in person',note:'Have the deceased\'s SSN ready. Call to report, ask about survivor benefits, and request the $255 lump-sum in one call.'},
+  'credit bureau':       {phone:'Equifax: 1-800-685-1111 · Experian: 1-888-397-3742 · TransUnion: 1-800-916-8800',hours:'Mon–Fri business hours',web:'annualcreditreport.com',email:'Submit by mail or online portal',note:'Send a copy of the death certificate and a brief letter to each bureau to place a deceased alert.'},
+  'irs':                 {phone:'1-800-829-1040',hours:'Mon–Fri 7am–7pm',web:'irs.gov',email:'N/A — mail or online',note:'File the final 1040 by April 15 of the year after death. Write "Deceased" and the date of death at the top. Use Form 1310 if claiming a refund.'},
+  'va ':                 {phone:'1-800-827-1000',hours:'Mon–Fri 8am–9pm ET',web:'va.gov',email:'N/A — call or visit',note:'Have the veteran\'s VA file number and DD-214 discharge papers ready. Ask specifically about DIC, burial allowance, and education benefits for dependents.'},
+  'medicare':            {phone:'1-800-633-4227',hours:'24/7',web:'medicare.gov',email:'N/A',note:'Medicare must be notified of the death. Benefits stop the month of death. Any premiums paid beyond that date may be refunded to the estate.'},
+  'probate':             {phone:'Contact your county court',hours:'Business hours',web:'Search "[county] probate court"',email:'Varies by county',note:'File in the county where the deceased lived. You will need the original will, a certified death certificate, and a petition for probate. Most courts have self-help packets.'},
+  'dmv':                 {phone:'Varies by state',hours:'Business hours',web:'Search "[state] DMV title transfer death"',email:'N/A — in person or mail',note:'Bring the title, death certificate, and your photo ID. A surviving spouse on the title can transfer directly. Otherwise you may need Letters Testamentary.'},
+  'homeowners':          {phone:'See your policy declarations page',hours:'Business hours',web:'Your insurer\'s website',email:'claims@[insurer].com typically',note:'An unoccupied home may lose coverage within 30–60 days of vacancy. Notify immediately and ask about an estate or vacancy policy rider.'},
+  'employer':            {phone:'HR department — see pay stub or company directory',hours:'Business hours',web:'Company HR portal',email:'HR email on pay stub or offer letter',note:'Ask specifically about: group life insurance, uncashed PTO, final paycheck timing, 401k or pension beneficiary process, and COBRA for any dependents.'},
+  'default':             {phone:'See account statements or institution website',hours:'Business hours',web:'Search institution name + estate services',email:'estate@[institution].com or estate services page',note:'Ask to be connected to the Estate Services or Bereavement team. Most institutions have a dedicated team for this.'}
+};
+function getContactInfo(taskName,institution){
+  const n=(taskName||'').toLowerCase();
+  const inst=(institution||'').toLowerCase();
+  for(const[key,val] of Object.entries(CONTACT_INFO)){
+    if(n.includes(key)||inst.includes(key))return val;
+  }
+  return {...CONTACT_INFO.default,note:CONTACT_INFO.default.note};
+}
+
+// ── SPECIAL GUIDANCE ──
+function getTaskGuidance(t){
+  const n=(t.name||'').toLowerCase();
+  // Death certificate guidance
+  if(n.includes('death certificate')||n.includes('obtain cert')){
+    return `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;font-size:12px;line-height:1.8;color:var(--text2)">
+      <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">Understanding death certificates</div>
+      <p><strong style="color:var(--text)">Certified copy vs. proof of death:</strong> A <em>certified copy</em> has a raised seal from the county registrar and is required by banks, courts, insurance companies, and government agencies. A <em>proof of death</em> (sometimes called an informational copy) is a photocopy used only for personal records — institutions will reject it.</p>
+      <p style="margin-top:8px"><strong style="color:var(--text)">How many do you need?</strong> Order 10–15 certified copies. Each bank, insurance company, government agency, and court typically keeps one permanently. You will go through them faster than you expect.</p>
+      <p style="margin-top:8px"><strong style="color:var(--text)">How to get them:</strong></p>
+      <div style="margin-top:5px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);flex-shrink:0">1.</span><div><strong style="color:var(--text)">Funeral home</strong> — Fastest. Ask them to order 10–15 certified copies when they file the death certificate. They handle all paperwork.</div></div>
+        <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);flex-shrink:0">2.</span><div><strong style="color:var(--text)">VitalChek.com</strong> — Official government service. 5–10 business days. About $15–25 per copy plus shipping. <a href="https://www.vitalchek.com" target="_blank" style="color:var(--gold)">vitalchek.com</a></div></div>
+        <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);flex-shrink:0">3.</span><div><strong style="color:var(--text)">County vital records office</strong> — In person, same day. Bring your photo ID and $10–25 per copy. Search "[county name] vital records office" to find your local office.</div></div>
+      </div>
+      <div style="margin-top:10px;padding:8px 10px;background:rgba(90,159,212,0.07);border-radius:5px;border:1px solid rgba(90,159,212,0.18)">
+        <div id="funeral-homes-${t.id}" style="font-size:11px;color:var(--blue)">
+          <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border:1.5px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite"></div> Finding funeral homes in ${A.state||'your area'}…</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  // Email / digital account guidance
+  if(n.includes('email')||n.includes('google account')||n.includes('icloud')||n.includes('apple')||n.includes('facebook')||n.includes('instagram')||n.includes('memoriali')||n.includes('digital account')){
+    return `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;font-size:12px;line-height:1.8;color:var(--text2)">
+      <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px">How to handle digital accounts</div>
+      <p>You generally have three options for each account: <strong style="color:var(--text)">memorialize</strong> (preserve as a memorial), <strong style="color:var(--text)">close/delete</strong>, or <strong style="color:var(--text)">download and archive</strong> (preserve data before closing). The right choice depends on what the deceased would have wanted.</p>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:7px">
+        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Gmail / Google</strong> — Use Google's Inactive Account Manager or submit a request at <a href="https://support.google.com/accounts/troubleshooter/6357590" target="_blank" style="color:var(--gold)">support.google.com</a>. You can request account data or deletion. You will need a death certificate and your own ID.</div>
+        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Apple ID / iCloud</strong> — Call Apple at <strong style="color:var(--text)">1-800-275-2273</strong>. Apple has a Digital Legacy feature — if the person had nominated a legacy contact, they can access data. Otherwise you need a death certificate and a court order.</div>
+        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Facebook / Instagram</strong> — Submit a Special Request at <a href="https://www.facebook.com/help/1506822589577997" target="_blank" style="color:var(--gold)">facebook.com/help</a>. You can memorialize the account or request removal. Proof of death and relationship required.</div>
+        <div style="padding:8px 10px;background:var(--bg3);border-radius:6px"><strong style="color:var(--text)">Outlook / Microsoft</strong> — Contact Microsoft support at <a href="https://support.microsoft.com" target="_blank" style="color:var(--gold)">support.microsoft.com</a>. Provide death certificate and proof of relationship. They can close the account or provide data access with a court order.</div>
+      </div>
+    </div>`;
+  }
+  return null;
+}
+
 // ── GENERIC WORKFLOW ──
 function genericWorkflow(t,wf){
   const needsLawyer=(t.name||'').toLowerCase().includes('probate')||(t.name||'').toLowerCase().includes('out of state')||(t.name||'').toLowerCase().includes('estate attorney');
-  let body=`<div style="margin-top:2px">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <button class="sa-btn primary" onclick="draftGenericLetter('${t.id}','${(t.institution||'').replace(/'/g,"\\'")}','${(t.name||'').replace(/'/g,"\\'")}')">✦ Draft letter / form</button>
+  const contact=getContactInfo(t.name,t.institution);
+  const guidance=getTaskGuidance(t);
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+  let body=`<div style="display:flex;flex-direction:column;gap:10px;margin-top:2px">`;
+
+  // Guidance block (death cert, digital accounts, etc.)
+  if(guidance){
+    body+=guidance;
+    // Trigger funeral home search for death cert task
+    if((t.name||'').toLowerCase().includes('death cert'))setTimeout(()=>loadFuneralHomes(t.id),200);
+  }
+
+  // Contact info card
+  body+=`<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px">
+    <div style="font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:9px">Contact information</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${contact.phone!=='N/A'?`<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:11px;color:var(--text3);width:40px;flex-shrink:0;padding-top:1px">📞</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Phone</div><div style="font-size:12px;color:var(--text)">${contact.phone}</div><div style="font-size:10px;color:var(--text3)">${contact.hours}</div></div></div>`:''}
+      ${contact.web?`<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:11px;color:var(--text3);width:40px;flex-shrink:0;padding-top:1px">🌐</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Website</div><div style="font-size:12px;color:var(--text)">${contact.web}</div></div></div>`:''}
+      ${contact.email&&contact.email!=='N/A'?`<div style="display:flex;gap:8px;align-items:flex-start"><span style="font-size:11px;color:var(--text3);width:40px;flex-shrink:0;padding-top:1px">✉</span><div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Email / Form</div><div style="font-size:12px;color:var(--text)">${contact.email}</div></div></div>`:''}
+      ${contact.note?`<div style="margin-top:4px;font-size:11px;color:var(--amber);padding:6px 9px;background:rgba(212,137,58,0.07);border-radius:5px;line-height:1.6">💡 ${contact.note}</div>`:''}
     </div>
-    <div id="darea-${t.id}"></div>
   </div>`;
+
+  // Draft area
+  body+=`<div>
+    <button class="sa-btn primary" style="width:100%;justify-content:center;display:flex;align-items:center;gap:7px" onclick="draftGenericLetter('${t.id}','${(t.institution||'').replace(/'/g,"\\'")}','${(t.name||'').replace(/'/g,"\\'")}')">✦ Draft letter / form</button>
+    <div id="darea-${t.id}" style="margin-top:6px"></div>
+  </div></div>`;
+
   if(needsLawyer)body+=renderLawyerCard(t);
   return body;
+}
+
+async function loadFuneralHomes(tid){
+  const el=document.getElementById('funeral-homes-'+tid);
+  if(!el||!A.state)return;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system:'You are a helpful estate specialist. Provide practical resources. No em dashes. Return JSON only: {"resources":[{"name":"...","description":"...","url":"..."}]} with 2-3 items for finding local funeral homes or ordering death certificates in the state.',messages:[{role:'user',content:`State: ${A.state}. Provide 2-3 resources for finding funeral homes or obtaining death certificates in ${A.state}. Include the state vital records office with URL.`}]})});
+    const d=await r.json();
+    const txt=(d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    let parsed;
+    try{parsed=JSON.parse(txt);}catch(e){parsed=null;}
+    if(parsed?.resources?.length){
+      el.innerHTML=parsed.resources.map(res=>`<div style="margin-bottom:5px"><strong style="color:var(--text)">${res.name}</strong> — <span style="color:var(--text2)">${res.description}</span> <a href="${res.url}" target="_blank" style="color:var(--gold)">${res.url.replace('https://','')}</a></div>`).join('');
+    } else {
+      el.innerHTML=`<div>Find local funeral homes at <a href="https://www.nfda.org/find-a-funeral-home" target="_blank" style="color:var(--gold)">nfda.org/find-a-funeral-home</a> · ${A.state} vital records: search "${A.state} vital records office"</div>`;
+    }
+  }catch(e){el.innerHTML=`<div>Find local funeral homes at <a href="https://www.nfda.org/find-a-funeral-home" target="_blank" style="color:var(--gold)">nfda.org/find-a-funeral-home</a></div>`;}
 }
 
 async function draftGenericLetter(tid,institution,taskName){
@@ -1515,12 +1637,18 @@ async function draftGenericLetter(tid,institution,taskName){
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   const el=document.getElementById('darea-'+tid);
   if(!el)return;
-  el.innerHTML=`<div class="slbl" style="margin:4px 0 5px">Your letter</div><div class="draft-box streaming" id="gen-draft-${tid}"></div><div id="gen-actions-${tid}"></div>`;
+  el.innerHTML=`<div class="slbl" style="margin:4px 0 5px">Your letter</div><div class="draft-box streaming" id="gen-draft-${tid}" style="min-height:120px;max-height:320px;overflow-y:auto"></div><div id="gen-actions-${tid}"></div>`;
   addTrace(tid,'action','Draft','Preparing letter for '+(institution||taskName));
-  // pull tax context if available
   const taxCtx=window._taxParsed?`\nFinancial context from uploaded documents: ${window._taxParsed}`:'';
+  const sig=document.getElementById('sig-inp')?.value||A.executorName||'[Executor Name]';
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a warm, professional notification letter. Plain language. Formal but kind. Use [brackets] only for genuinely unknown info. Sign from executor perspective. Do not use em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Task: ${taskName}\nInstitution: ${institution||taskName}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor relationship: ${A.rel}\nDate: ${today}\nNotes: ${taskNotes[tid]||'none'}${taxCtx}`}]})});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,stream:true,system:'You are a compassionate estate specialist. Draft a warm, professional notification letter. Use the exact names provided — do NOT use brackets for the deceased name or executor name, those are known. Use [brackets] only for unknown details like account numbers or addresses. Plain language. No em dashes. Do not mention artificial intelligence.',messages:[{role:'user',content:`Task: ${taskName}
+Institution: ${institution||taskName}
+Deceased full name: ${A.name||'[Deceased Name]'}
+State of residence: ${A.state||'[State]'}
+Executor / relationship: ${A.rel||'executor'}, signing as: ${sig}
+Date: ${today}
+Notes: ${taskNotes[tid]||'none'}${taxCtx}`}]})});
     const reader=r.body.getReader(),dec=new TextDecoder();let txt='';
     while(true){
       const{done:d,value}=await reader.read();if(d)break;
@@ -1536,9 +1664,9 @@ async function draftGenericLetter(tid,institution,taskName){
     if(act)act.innerHTML=`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
       <button class="sa-btn primary" data-copy-tid="${tid}" onclick="copyDraftFor('${tid}')">Copy letter</button>
       <button class="sa-btn" onclick="draftGenericLetter('${tid}','${(institution||'').replace(/'/g,"\\'")}','${(taskName||'').replace(/'/g,"\\'")}')" style="border-color:var(--border2)">Redraft</button>
-      <button class="sa-btn" onclick="togDone('${tid}')">Mark complete</button>
+      <button class="sa-btn" style="border-color:var(--green);color:var(--green)" onclick="setStatus('${tid}','done')">Mark complete</button>
     </div>`;
-    addTrace(tid,'verify','Letter complete','Draft ready. No sensitive data detected.');
+    addTrace(tid,'verify','Letter complete','Draft ready with deceased name and executor pre-filled.');
   }catch(e){
     const de=document.getElementById('gen-draft-'+tid);
     if(de){de.textContent='Something went wrong. Please try again.';de.classList.remove('streaming');}
