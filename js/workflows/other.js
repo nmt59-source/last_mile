@@ -67,12 +67,22 @@ function employerWorkflow(t, wf) {
     const suggestDropdown = prefillEmployers.length > 1
       ? `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">${prefillEmployers.map(e => `<button class="sa-btn" style="text-align:left;font-size:12px" onclick="document.getElementById('emp-co-${t.id}').value='${e.replace(/'/g,"\\'")}';getWF('${t.id}').data.co='${e.replace(/'/g,"\\'")}'">${e}</button>`).join('')}</div>`
       : '';
+    const hrContact = wf.data.hrContact || '';
     body += `<div class="step-card active-step">
       <div class="step-card-hdr"><div class="step-num">1</div><div class="step-card-title">Company and role details</div><span class="step-card-status">Fill in</span></div>
       <div class="step-card-body">
         ${suggestDropdown}
         <div class="field-row"><label class="field-lbl">Company name <span>*</span></label><input class="field-inp" id="emp-co-${t.id}" placeholder="Where they worked" value="${prefillCo}" oninput="document.getElementById('emp-co-err-${t.id}').textContent='';this.style.borderColor='';getWF('${t.id}').data.co=this.value"/>${prefillNote}<div id="emp-co-err-${t.id}" style="color:var(--red);font-size:11px;min-height:14px;margin-top:3px"></div></div>
         <div class="field-row"><label class="field-lbl">Their job title (optional)</label><input class="field-inp" id="emp-title-${t.id}" placeholder="e.g. Manager, Teacher, Engineer" value="${wf.data.title || ''}"/></div>
+        <div class="field-row">
+          <label class="field-lbl">HR contact — phone or email (optional)</label>
+          <input class="field-inp" id="emp-hr-${t.id}" placeholder="e.g. hr@company.com or 1-800-555-0100" value="${hrContact}" oninput="getWF('${t.id}').data.hrContact=this.value"/>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+            <button class="sa-btn" style="font-size:11px;padding:4px 10px" onclick="lookupHrContact('${t.id}')">Look up HR contact</button>
+            <div id="emp-hr-status-${t.id}" style="font-size:11px;color:var(--text3)"></div>
+          </div>
+          <div id="emp-hr-results-${t.id}" style="margin-top:8px"></div>
+        </div>
         <div class="step-actions"><button class="sa-btn primary" onclick="empStep1('${t.id}')">Draft HR notification</button></div>
       </div>
     </div>`;
@@ -123,13 +133,14 @@ async function empStep1(tid) {
   const taskName = (tasks.find(t => String(t.id) === String(tid)) || {}).name || 'HR notification';
   if (!generalAssistantStart(tid, taskName, 'Communication agent → Verify agent')) return;
   const title = document.getElementById('emp-title-' + tid)?.value || '';
-  getWF(tid).data.co = co; getWF(tid).data.title = title;
+  const hrContact = document.getElementById('emp-hr-' + tid)?.value || getWF(tid).data.hrContact || '';
+  getWF(tid).data.co = co; getWF(tid).data.title = title; getWF(tid).data.hrContact = hrContact;
   addTrace(tid, 'step', 'Drafting your letter', 'Preparing the HR notification for ' + co + '.');
   getWF(tid).draftStreaming = true; setWFStep(tid, 1);
   await delay(60);
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   try {
-    const r = await anthropicFetch({ model: 'claude-sonnet-4-20250514', max_tokens: 600, stream: true, system: COMM_PII_RULE + 'You are a compassionate estate specialist with state-specific knowledge. Draft a professional HR bereavement email. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents (federal 60-day deadline). Reference any state-specific final paycheck timing laws or continuation-of-pay rules for the executor\'s state. No em dashes.', messages: [{ role: 'user', content: `Company: ${co}\nJob title: ${title || 'not specified'}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor: ${A.rel}\nDate: ${today}` }] });
+    const r = await anthropicFetch({ model: 'claude-sonnet-4-20250514', max_tokens: 700, stream: true, system: COMM_PII_RULE + 'You are a compassionate estate specialist with state-specific knowledge. Draft a professional HR bereavement email. Include a subject line. Cover: stop payroll, final paycheck, group life insurance, 401k or pension details, COBRA for dependents (federal 60-day deadline). If an HR email or contact name is provided, address the letter to that contact directly. Reference any state-specific final paycheck timing laws or continuation-of-pay rules for the executor\'s state. No em dashes.', messages: [{ role: 'user', content: `Company: ${co}\nJob title: ${title || 'not specified'}\nHR contact: ${hrContact || 'not specified'}\nDeceased: ${A.name}\nState: ${A.state}\nExecutor: ${A.rel}\nDate: ${today}` }] });
     const reader = r.body.getReader(), dec = new TextDecoder(); let txt = '';
     const el = document.getElementById('draft-stream-' + tid);
     while (true) { const { done: d, value } = await reader.read(); if (d) break; for (const line of dec.decode(value).split('\n')) { if (!line.startsWith('data: ')) continue; const raw = line.slice(6); if (raw === '[DONE]') continue; try { const j = JSON.parse(raw); if (j.type === 'content_block_delta' && j.delta?.text) { txt += j.delta.text; if (el) el.textContent = txt; } } catch (e) { } } }
@@ -144,6 +155,43 @@ async function empStep1(tid) {
 }
 
 async function empRedraft(tid) { getWF(tid).draft = ''; setDraft(tid, ''); await empStep1(tid); }
+
+async function lookupHrContact(tid) {
+  const co = (document.getElementById('emp-co-' + tid)?.value || getWF(tid).data.co || '').trim();
+  const statusEl = document.getElementById('emp-hr-status-' + tid);
+  const resultsEl = document.getElementById('emp-hr-results-' + tid);
+  if (!co) { if (statusEl) statusEl.textContent = 'Enter the company name first.'; return; }
+  if (statusEl) statusEl.textContent = 'Looking up HR contact…';
+  if (resultsEl) resultsEl.innerHTML = '';
+  try {
+    const r = await anthropicFetch({
+      model: 'claude-sonnet-4-20250514', max_tokens: 300,
+      system: 'You are a helpful estate administration assistant. Provide HR department contact information for companies when asked. Only provide information you are confident is accurate. If unsure, provide the best general guidance. No em dashes.',
+      messages: [{ role: 'user', content: `Company: ${co}\nState: ${A.state || 'unknown'}\n\nProvide the HR department contact for estate/bereavement notifications. Include:\n- HR phone number (main or benefits line)\n- HR email address if known\n- Mailing address for HR/benefits department if available\n- Any specific department to contact for deceased employee matters\n\nIf you are not certain of the exact contact details, say so and suggest how to find them (e.g. company website, LinkedIn). Format as JSON: {"phone":"...","email":"...","address":"...","department":"...","note":"...","confidence":"high|medium|low"}` }]
+    });
+    const d = await r.json();
+    const txt = (d.content?.[0]?.text || '').replace(/```json|```/g, '').trim();
+    let info; try { info = JSON.parse(txt); } catch (e) { info = null; }
+    if (statusEl) statusEl.textContent = '';
+    if (!info) {
+      if (resultsEl) resultsEl.innerHTML = `<div style="font-size:12px;color:var(--text2)">Could not retrieve contact details. Try searching "${co} HR department" or "${co} benefits contact" on their official website.</div>`;
+      return;
+    }
+    const confidence = info.confidence === 'high' ? '' : `<div style="font-size:10px;color:var(--amber);margin-bottom:6px">Verify these details before sending — confidence: ${info.confidence || 'unknown'}</div>`;
+    let html = `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px">${confidence}`;
+    if (info.phone) html += `<div style="font-size:12px;margin-bottom:4px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-right:6px">Phone</span><a href="tel:${info.phone}" style="color:var(--gold)">${info.phone}</a></div>`;
+    if (info.email) html += `<div style="font-size:12px;margin-bottom:4px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-right:6px">Email</span><a href="mailto:${info.email}" style="color:var(--gold)">${info.email}</a> <button style="font-size:10px;padding:1px 6px;background:none;border:1px solid var(--border2);border-radius:3px;color:var(--text3);cursor:pointer;font-family:inherit" onclick="document.getElementById('emp-hr-${tid}').value='${info.email}';getWF('${tid}').data.hrContact='${info.email}'">Use</button></div>`;
+    if (info.department) html += `<div style="font-size:12px;margin-bottom:4px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-right:6px">Dept</span>${info.department}</div>`;
+    if (info.note) html += `<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5">${info.note}</div>`;
+    html += '</div>';
+    if (resultsEl) resultsEl.innerHTML = html;
+    addTrace(tid, 'step', 'HR contact looked up', `Found contact information for ${co}. Verify before sending.`);
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '';
+    if (resultsEl) resultsEl.innerHTML = `<div style="font-size:12px;color:var(--text2)">Could not look up contact details. Search "${co} HR contact" on their website.</div>`;
+  }
+}
+
 function empStep2(tid) {
   traceAndOpenSendModal(tid, () => {
     addTrace(tid, 'verify', 'Ready to send', 'You confirmed the letter is accurate.');
@@ -158,9 +206,9 @@ function ssaWorkflow(t, wf) {
   return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:2px">
     <div class="slbl" style="margin-bottom:4px">Call 1-800-772-1213, Monday to Friday, 8am to 7pm local time</div>
     ${makeSubCard(t.id, 'ssa_report', '📞', 'Report the death', `<p>Tell the representative you are calling to report a death and stop benefit payments. Have the Social Security number of the deceased ready.</p><p style="margin-top:6px;color:var(--amber);font-size:11px">Any benefit payment received after the date of death must be returned.</p>`)}
-    ${makeSubCard(t.id, 'ssa_lump', '💰', 'Request the $255 lump-sum death payment', `<p>A one-time payment of $255 may be available to a surviving spouse or dependent child in the household. This is not automatic — ask for it specifically during the call.</p>`)}
-    ${hasSurvivorSpouse ? makeSubCard(t.id, 'ssa_spouse', '👫', 'Apply for monthly spouse survivor benefits', `<p>A surviving spouse may be entitled to monthly payments based on the deceased's earnings record. Ask the representative to open a survivor benefit application during this call.</p>`) : ''}
-    ${hasSurvivorChild ? makeSubCard(t.id, 'ssa_child', '👶', 'Apply for monthly child survivor benefits', `<p>Children under 18 (or under 19 if still in high school) may qualify for monthly payments. Bring birth certificates to your SSA appointment.</p>`) : ''}
+    ${makeSubCard(t.id, 'ssa_lump', '💲', 'Request the $255 lump-sum death payment', `<p>A one-time payment of $255 may be available to a surviving spouse or dependent child in the household. This is not automatic — ask for it specifically during the call.</p>`)}
+    ${hasSurvivorSpouse ? makeSubCard(t.id, 'ssa_spouse', '📋', 'Apply for monthly spouse survivor benefits', `<p>A surviving spouse may be entitled to monthly payments based on the deceased's earnings record. Ask the representative to open a survivor benefit application during this call.</p>`) : ''}
+    ${hasSurvivorChild ? makeSubCard(t.id, 'ssa_child', '📋', 'Apply for monthly child survivor benefits', `<p>Children under 18 (or under 19 if still in high school) may qualify for monthly payments. Bring birth certificates to your SSA appointment.</p>`) : ''}
   </div>`;
 }
 
@@ -318,24 +366,39 @@ function renderLawyerCard(t) {
   const n = (t.name || '').toLowerCase();
   const isOutOfState = n.includes('out of state') || ((A.assets || []).includes('Home or real estate') && A.state);
   const state = A.state || 'your state';
+  const wf = getWF(t.id);
   setTimeout(() => loadLawyerRecs(t.id, state, isOutOfState), 100);
+  const draftSection = wf.lawyerDraft
+    ? `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Draft outreach email</div>
+        <div class="draft-box" id="lawyer-draft-${t.id}">${wf.lawyerDraft}</div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button class="sa-btn" data-copy-tid="${t.id}" onclick="navigator.clipboard.writeText(document.getElementById('lawyer-draft-${t.id}').textContent)">Copy email</button>
+          <button class="sa-btn" onclick="draftLawyerEmail('${t.id}','${state}')">Redraft</button>
+        </div>
+      </div>`
+    : `<div style="margin-top:12px">
+        <button class="sa-btn primary" onclick="draftLawyerEmail('${t.id}','${state}')">Draft outreach email to an attorney</button>
+      </div>`;
   return `<div class="lawyer-card" id="lawyer-card-${t.id}">
-    <div class="lawyer-title">👔 ${isOutOfState ? 'This may require attorneys in multiple states' : 'Professional help is recommended for this step'}</div>
+    <div class="lawyer-title">${isOutOfState ? 'This may require attorneys in multiple states' : 'Professional help is recommended for this step'}</div>
     <div id="lawyer-recs-${t.id}">
       <div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;padding:4px 0">
         <div style="width:10px;height:10px;border:1.5px solid var(--text3);border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0"></div>
         Finding verified attorneys and CPAs in ${state}…
       </div>
     </div>
+    <div id="lawyer-draft-wrap-${t.id}">${draftSection}</div>
   </div>`;
 }
 
 // Curated, always-verified referral links shown regardless of AI response quality.
 const LAWYER_VERIFIED_LINKS = [
-  { label: 'ABA — Find a Lawyer',         url: 'https://www.americanbar.org/groups/legal_services/flh-home/' },
-  { label: 'CPAverify — Licensed CPAs',   url: 'https://www.cpaverify.org' },
+  { label: 'ABA — Find a Lawyer',          url: 'https://www.americanbar.org/groups/legal_services/flh-home/' },
+  { label: 'ACTEC — Estate Attorneys',     url: 'https://www.actec.org/resources/find-a-fellow/' },
+  { label: 'CPAverify — Licensed CPAs',    url: 'https://www.cpaverify.org' },
   { label: 'LawHelp.org — Free Legal Aid', url: 'https://www.lawhelp.org' },
-  { label: 'USA.gov — Estate Planning',   url: 'https://www.usa.gov/wills-estates' },
+  { label: 'USA.gov — Estate Planning',    url: 'https://www.usa.gov/wills-estates' },
 ];
 
 async function loadLawyerRecs(tid, state, isOutOfState) {
@@ -343,8 +406,6 @@ async function loadLawyerRecs(tid, state, isOutOfState) {
   if (!el) return;
   addTrace(tid, 'step', 'Finding local help', 'Looking for estate attorneys and CPAs in ' + state + '.');
 
-  // Always render the verified baseline links first so the user has something to act on
-  // immediately, before the AI response comes back.
   const statePortal = STATE_GOV[state] || 'https://usa.gov';
   const verifiedChips = [
     ...LAWYER_VERIFIED_LINKS,
@@ -362,9 +423,9 @@ async function loadLawyerRecs(tid, state, isOutOfState) {
 
   try {
     const r = await anthropicFetch({
-      model: 'claude-sonnet-4-20250514', max_tokens: 500,
+      model: 'claude-sonnet-4-20250514', max_tokens: 900,
       system: 'You are an estate planning specialist. Provide accurate referral resources for estate attorneys and CPAs. Be factual and practical. No em dashes. Do not mention artificial intelligence. Only cite URLs you are confident exist — use top-level domains (e.g. https://www.ctbar.org) rather than guessing deep page URLs.',
-      messages: [{ role: 'user', content: `State: ${state}\nSituation: Estate administration after a death. ${isOutOfState ? 'May involve out-of-state real property (ancillary probate).' : ''}\n\nProvide:\n1. The official state bar attorney referral service for ${state} with their website URL (use the top-level domain if unsure of a specific page)\n2. The state CPA society for ${state} with their website URL\n3. One free legal aid resource for ${state}\n4. 2 to 3 practical tips for what to ask an estate attorney in ${state}\n\nFormat as JSON: {"bar":{"name":"...","url":"...","note":"..."},"cpa":{"name":"...","url":"...","note":"..."},"legal_aid":{"name":"...","url":"..."},"tips":["...","..."]}` }]
+      messages: [{ role: 'user', content: `State: ${state}\nSituation: Estate administration after a death. ${isOutOfState ? 'May involve out-of-state real property (ancillary probate).' : ''}\n\nProvide 5 ways to find a qualified estate attorney or CPA in ${state}. Include:\n1. The official state bar attorney referral service for ${state} (name, URL, phone if known)\n2. The state CPA society for ${state} (name, URL)\n3. ACTEC fellow finder (always: https://www.actec.org/resources/find-a-fellow/)\n4. One free legal aid resource for ${state} (name, URL, phone if known)\n5. A practical tip specific to ${state} (e.g. local probate court self-help center, county bar association)\n\nAlso provide 3 questions to ask any estate attorney on a first call.\n\nFormat as JSON: {"options":[{"type":"State Bar","name":"...","url":"...","phone":"...","note":"..."},{"type":"CPA Society","name":"...","url":"...","phone":"...","note":"..."},{"type":"ACTEC","name":"ACTEC Fellow Finder","url":"https://www.actec.org/resources/find-a-fellow/","note":"..."},{"type":"Legal Aid","name":"...","url":"...","phone":"...","note":"..."},{"type":"Local Tip","name":"...","url":"...","note":"..."}],"questions":["...","...","..."]}` }]
     });
     const d = await r.json();
     let txt = (d.content?.[0]?.text || '').replace(/```json|```/g, '').trim();
@@ -372,48 +433,78 @@ async function loadLawyerRecs(tid, state, isOutOfState) {
 
     addTrace(tid, 'verify', 'Local resources found', `Referral resources found for ${state}. Verified baseline links are always shown above.`);
 
-    const aiDisclaimer = `<div style="font-size:10px;color:var(--text3);margin-bottom:8px;display:flex;align-items:flex-start;gap:5px"><span style="color:var(--amber);flex-shrink:0">⚠</span> These additional resources were suggested by AI. Always verify the link works before relying on it.</div>`;
+    const aiDisclaimer = `<div style="font-size:10px;color:var(--text3);margin-bottom:8px;display:flex;align-items:flex-start;gap:5px"><span style="color:var(--amber);flex-shrink:0">⚠</span> Resources suggested by AI — verify links before relying on them.</div>`;
 
-    if (!rec || !rec.bar) {
+    if (!rec || !rec.options?.length) {
       el.innerHTML = verifiedBlock + `<div style="font-size:12px;color:var(--text2);line-height:1.7">
-        <div class="lawyer-row"><span class="ltype">Attorney</span><div>Search for a probate or estate attorney in ${state}. The ABA referral service above can connect you with a local attorney. Many offer a free first consultation.</div></div>
+        <div class="lawyer-row"><span class="ltype">Attorney</span><div>Search for a probate or estate attorney in ${state}. The ABA and ACTEC referral services above can connect you with a local attorney. Many offer a free first consultation.</div></div>
         ${isOutOfState ? `<div class="lawyer-row"><span class="ltype">Out of state</span><div>Real property in another state may require ancillary probate. Your primary estate attorney in ${state} can refer you to counsel in that state.</div></div>` : ''}
         <div class="lawyer-row"><span class="ltype">CPA</span><div>A CPA with estate tax experience can handle the final return and Form 1041. Use CPAverify.org above to find one in ${state}.</div></div>
       </div>`;
       return;
     }
 
-    const tipsHtml = rec.tips?.length
-      ? `<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:6px;padding:10px 12px;margin-top:6px">
-          <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:7px">Questions to ask your attorney in ${state}</div>
-          ${rec.tips.map(tip => `<div style="font-size:12px;color:var(--text2);line-height:1.6;display:flex;gap:6px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">›</span>${tip}</div>`).join('')}
+    const optRows = rec.options.map((o, i) => {
+      const phoneHtml = o.phone ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">📞 <a href="tel:${o.phone}" style="color:var(--text2)">${o.phone}</a></div>` : '';
+      const urlHtml = o.url ? `<a href="${o.url}" target="_blank" rel="noopener noreferrer" style="color:var(--gold);font-size:11px">${o.url.replace('https://','')}</a>` : '';
+      return `<div class="lawyer-row">
+        <span class="ltype" style="font-size:10px;min-width:70px">${o.type || 'Option ' + (i+1)}</span>
+        <div>
+          <div style="font-weight:500;color:var(--text);margin-bottom:2px">${o.name || ''}</div>
+          ${o.note ? `<div style="font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:3px">${o.note}</div>` : ''}
+          ${urlHtml}${phoneHtml}
+        </div>
+      </div>`;
+    }).join('');
+
+    const questionsHtml = rec.questions?.length
+      ? `<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:6px;padding:10px 12px;margin-top:8px">
+          <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:7px">Questions to ask on your first call</div>
+          ${rec.questions.map(q => `<div style="font-size:12px;color:var(--text2);line-height:1.6;display:flex;gap:6px;margin-bottom:5px"><span style="color:var(--gold);flex-shrink:0">›</span>${q}</div>`).join('')}
          </div>`
       : '';
 
     el.innerHTML = verifiedBlock + `<div style="display:flex;flex-direction:column;gap:8px">
       ${aiDisclaimer}
-      <div class="lawyer-row"><span class="ltype">State Bar</span><div>
-        <div style="font-weight:500;color:var(--text);margin-bottom:2px">${rec.bar.name || state + ' State Bar'}</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.55">${rec.bar.note || 'State bar attorney referral service'}</div>
-        <a href="${rec.bar.url || 'https://www.americanbar.org'}" target="_blank" rel="noopener noreferrer" style="color:var(--gold);font-size:11px">${(rec.bar.url || 'americanbar.org').replace('https://', '')}</a>
-      </div></div>
       ${isOutOfState ? `<div class="lawyer-row"><span class="ltype">Out of state</span><div style="font-size:12px;color:var(--text2);line-height:1.55">Real property in another state requires ancillary probate. Your primary estate attorney in ${state} can refer you to counsel there.</div></div>` : ''}
-      <div class="lawyer-row"><span class="ltype">CPA</span><div>
-        <div style="font-weight:500;color:var(--text);margin-bottom:2px">${rec.cpa.name || state + ' CPA Society'}</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.55">${rec.cpa.note || 'State CPA society referral service'}</div>
-        <a href="${rec.cpa.url || 'https://www.cpaverify.org'}" target="_blank" rel="noopener noreferrer" style="color:var(--gold);font-size:11px">${(rec.cpa.url || 'cpaverify.org').replace('https://', '')}</a>
-      </div></div>
-      ${rec.legal_aid ? `<div class="lawyer-row"><span class="ltype" style="background:rgba(106,173,126,0.12);color:var(--green)">Free help</span><div>
-        <div style="font-weight:500;color:var(--text);margin-bottom:2px">${rec.legal_aid.name}</div>
-        <a href="${rec.legal_aid.url}" target="_blank" rel="noopener noreferrer" style="color:var(--gold);font-size:11px">${rec.legal_aid.url.replace('https://', '')}</a>
-      </div></div>` : ''}
-      ${tipsHtml}
+      ${optRows}
+      ${questionsHtml}
     </div>`;
   } catch (e) {
     el.innerHTML = verifiedBlock + `<div style="font-size:12px;color:var(--text2)">
-      <div class="lawyer-row"><span class="ltype">Attorney</span><div>Search for a probate attorney in ${state} via the ABA referral service linked above.</div></div>
+      <div class="lawyer-row"><span class="ltype">Attorney</span><div>Search for a probate attorney in ${state} via the ABA or ACTEC referral services linked above.</div></div>
       <div class="lawyer-row"><span class="ltype">CPA</span><div>Find a licensed CPA in ${state} using CPAverify.org linked above.</div></div>
     </div>`;
     console.error('loadLawyerRecs error:', e);
+  }
+}
+
+async function draftLawyerEmail(tid, state) {
+  const wf = getWF(tid);
+  const wrapEl = document.getElementById('lawyer-draft-wrap-' + tid);
+  if (wrapEl) wrapEl.innerHTML = `<div style="font-size:12px;color:var(--text3);margin-top:12px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--border);padding-top:12px"><div style="width:10px;height:10px;border:1.5px solid var(--text3);border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;flex-shrink:0"></div>Drafting outreach email…</div>`;
+  addTrace(tid, 'step', 'Drafting attorney email', 'Preparing an outreach email to an estate attorney.');
+  try {
+    const r = await anthropicFetch({
+      model: 'claude-sonnet-4-20250514', max_tokens: 500,
+      system: COMM_PII_RULE + 'You are a compassionate estate administration specialist. Draft a brief, professional first-contact email to an estate attorney. No em dashes. No artificial intelligence mentions.',
+      messages: [{ role: 'user', content: `State: ${state}\nExecutor: ${A.rel}\nDeceased: ${A.name}\nAssets flagged: ${(A.assets||[]).join(', ') || 'unknown'}\n\nDraft a short introductory email (8 to 12 sentences) requesting an initial consultation with an estate attorney. Include: executor role, nature of estate (general), request for a free or low-cost initial consultation, availability note. Mention any state-specific probate requirements if relevant. Do not invent specific details. Include a subject line.` }]
+    });
+    const d = await r.json();
+    const txt = (d.content?.[0]?.text || '').trim();
+    wf.lawyerDraft = txt;
+    scheduleSave();
+    if (wrapEl) wrapEl.innerHTML = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Draft outreach email</div>
+      <div class="draft-box" id="lawyer-draft-${tid}">${txt}</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="sa-btn" onclick="navigator.clipboard.writeText(document.getElementById('lawyer-draft-${tid}').textContent).then(()=>{this.textContent='Copied';setTimeout(()=>this.textContent='Copy email',1500)})">Copy email</button>
+        <button class="sa-btn" onclick="draftLawyerEmail('${tid}','${state}')">Redraft</button>
+      </div>
+    </div>`;
+    addTrace(tid, 'verify', 'Outreach email ready', 'Review the email before sending. Customize the attorney name and firm.');
+  } catch (e) {
+    if (wrapEl) wrapEl.innerHTML = `<div style="margin-top:12px"><button class="sa-btn primary" onclick="draftLawyerEmail('${tid}','${state}')">Draft outreach email to an attorney</button></div>`;
+    console.error('draftLawyerEmail error:', e);
   }
 }

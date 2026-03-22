@@ -381,8 +381,16 @@ function renderWorkflow(t) {
       <div id="wf-body-${t.id}" data-show-when="${bodyShowWhen}" style="${bodyDisplay}">${body}</div>
       ${isDone ? `<div class="done-banner"><div class="done-banner-title">✓ Task complete</div><div class="done-banner-sub">You can always reopen this task to edit notes or redraft the letter.</div></div>` : ''}
       <div>
-        <div class="slbl" style="margin-bottom:5px">Your notes</div>
-        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden"><textarea style="width:100%;background:transparent;border:none;padding:10px 12px;color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:56px;line-height:1.6" placeholder="Notes, account numbers, context…" oninput="taskNotes['${t.id}']=this.value;scheduleSave();">${taskNotes[t.id] || ''}</textarea></div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px">
+          <div class="slbl">Notes</div>
+          <div style="font-size:10px;color:var(--text3)">Jot down account numbers, contact info, or anything to reference while drafting</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden">
+          <textarea id="notes-ta-${t.id}" style="width:100%;background:transparent;border:none;padding:10px 12px;color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:80px;line-height:1.65;box-sizing:border-box" placeholder="e.g. Account ending in 4321 — Chase Bank. HR contact: Jane Smith, hr@company.com. Policy number: 00123." oninput="taskNotes['${t.id}']=this.value;scheduleSave();">${taskNotes[t.id] || ''}</textarea>
+          <div style="display:flex;justify-content:flex-end;padding:4px 8px 6px;border-top:1px solid var(--border)">
+            <button style="font-size:11px;padding:4px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s" onmouseenter="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseleave="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'" onclick="taskNotes['${t.id}']=document.getElementById('notes-ta-${t.id}').value;scheduleSave();this.textContent='Saved';setTimeout(()=>this.textContent='Save note',1500)">Save note</button>
+          </div>
+        </div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-gold" style="flex:1;font-size:13px;padding:10px" onclick="togDone('${t.id}')">${isDone ? 'Mark as not done' : 'Mark as complete'}</button>

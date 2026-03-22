@@ -16,7 +16,7 @@
 // Shared application state — all modules read/write these globals directly.
 const A = {};
 let qIdx = 0, tasks = [], customTasks = [], selTask = null, draftTxt = '';
-const taskDone = {}, taskNotes = {}, wfState = {}, vaultFiles = { cert: [], bank: [], w2: [] };
+const taskDone = {}, taskNotes = {}, wfState = {}, vaultFiles = { cert: [], bank: [], w2: [], other: [] };
 let emailOk = false, simCode = '';
 
 // API configuration

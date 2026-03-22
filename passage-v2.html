@@ -131,7 +131,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .legend{display:flex;gap:12px;padding:7px 22px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
 .leg{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}
 .leg-dot{width:6px;height:6px;border-radius:50%}
-.dash-body{flex:1;display:grid;grid-template-columns:300px 1fr;overflow:hidden;min-height:0}
+.dash-body{flex:1;display:grid;grid-template-columns:340px 1fr;overflow:hidden;min-height:0}
 @media(max-width:760px){.dash-body{grid-template-columns:1fr}}
 /* TASK LIST */
 .task-col{overflow-y:auto;border-right:1px solid var(--border);height:100%}
@@ -254,7 +254,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .found-val{font-size:12px;color:var(--text);line-height:1.5}
 .found-val a{color:var(--gold);text-decoration:none}
 /* DRAFT */
-.draft-box{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:13px;font-size:12px;color:var(--text);line-height:1.85;white-space:pre-wrap;max-height:260px;overflow-y:auto;margin:8px 0}
+.draft-box{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:14px 16px;font-size:13px;color:var(--text);line-height:1.9;white-space:pre-wrap;min-height:220px;max-height:480px;overflow-y:auto;margin:8px 0;resize:vertical}
 .draft-box.streaming::after,.call-script.streaming::after{content:'▋';animation:blink .8s step-end infinite;color:var(--gold)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 /* GUARD */
@@ -310,9 +310,9 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
 <!-- INTRO -->
 <div id="s-intro" class="screen active">
-  <div class="eyebrow">Passage · Estate Guide</div>
+  <div class="eyebrow">The Last Mile</div>
   <h1 class="intro-title">We know this is hard.<br/><span>We are here to help.</span></h1>
-  <p class="intro-sub">When someone you love passes away, there is a great deal that needs to be handled. We will walk you through every step, at your own pace.</p>
+  <p class="intro-sub">When someone you love passes away, there is a great deal that needs to be handled. The Last Mile will walk you through every step, at your own pace.</p>
   <button class="btn-gold" onclick="go('s-intake');renderQs()">Begin your estate guide</button>
   <p class="note">Private and secure. Nothing leaves your session without your permission.</p>
 </div>
@@ -334,7 +334,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <!-- VERIFICATION -->
 <div id="s-declare" class="screen">
   <div class="declare-wrap">
-    <div class="declare-icon">🤝</div>
+    <div class="declare-icon" style="font-size:28px;margin-bottom:10px">⚖</div>
     <div class="declare-title">One last step</div>
     <div class="declare-sub">A brief confirmation that you are authorized to manage this estate. This protects your loved one's accounts from fraud.</div>
     <div class="dcard">
@@ -367,8 +367,9 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <!-- UPLOAD -->
 <div id="s-upload" class="screen">
   <div class="upload-hdr">
+        <button class="skip-btn" style="margin-bottom:14px;padding:0;font-size:12px" onclick="showDeclaration()">← Back</button>
     <h2>Upload your key documents</h2>
-    <p>These two documents make your entire checklist more complete. We explain exactly how each one is used.</p>
+    <p>These documents help us build a more complete checklist and pre-fill common fields. Everything stays on your device.</p>
   </div>
   <div class="upload-body">
     <div class="ucard primary">
@@ -376,7 +377,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         <span class="ucard-icon">📋</span>
         <div class="ucard-info">
           <div class="ucard-name">Death certificate</div>
-          <div class="ucard-why">Almost every step requires a certified copy — the bank, Social Security, life insurance, the DMV, and the probate court all ask for one. Upload it here if you have it. If not, that's okay — we'll add a task to your checklist to help you get copies.</div>
+          <div class="ucard-why">Almost every step requires a certified copy — the bank, Social Security, life insurance, the DMV, and the probate court all ask for one. Upload it here if you have it. If not, we'll add a task to help you get copies.</div>
         </div>
         <span class="ucard-badge imp" id="cert-badge">Recommended</span>
       </div>
@@ -400,41 +401,56 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       </div>
     </div>
 
-    <div class="ucard primary">
-      <div class="ucard-top">
-        <span class="ucard-icon">🏦</span>
-        <div class="ucard-info">
-          <div class="ucard-name">Bank statement</div>
-          <div class="ucard-why">Helps us find financial accounts. A bank statement confirms account numbers and institution names. When you reach the financial notification tasks, we scan it to pre-fill your institution list automatically.</div>
-        </div>
-        <span class="ucard-badge imp" id="bank-badge">Important</span>
-      </div>
-      <div class="ufiles" id="bank-files"></div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <label class="ulbl" id="bank-lbl"><input type="file" accept=".pdf,.txt,.csv" style="display:none" onchange="handleFile('bank',this)"/> + Upload bank statement</label>
-      </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:6px">PDF, CSV, or text file. No digital copy? Log in to your bank's website and download the most recent statement.</div>
-    </div>
-
     <div class="ucard secondary">
       <div class="ucard-top">
         <span class="ucard-icon">📄</span>
         <div class="ucard-info">
-          <div class="ucard-name">W-2 (wage and tax statement)</div>
-          <div class="ucard-why">If you have a W-2, uploading it lets us extract the employer name automatically. This pre-fills the "Notify employer HR" task so you don't have to look it up. All personal information (SSN, wages, withholding) is removed before anything leaves your device.</div>
+          <div class="ucard-name">Tax return</div>
+          <div class="ucard-why">We extract the employer name to pre-fill the HR notification task. All personal information — SSN, income, withholding — is removed before anything is analyzed.</div>
         </div>
         <span class="ucard-badge opt" id="w2-badge">Optional</span>
       </div>
       <div class="ufiles" id="w2-files"></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <label class="ulbl" id="w2-lbl"><input type="file" accept=".pdf,.txt,.csv" style="display:none" onchange="handleFile('w2',this)"/> + Upload W-2</label>
+        <label class="ulbl" id="w2-lbl"><input type="file" accept=".pdf,.txt,.csv" style="display:none" onchange="handleFile('w2',this)"/> + Upload tax return</label>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6">No W-2 on hand? Request a free wage transcript at <a href="https://www.irs.gov/individuals/get-transcript" target="_blank" style="color:var(--gold)">irs.gov/individuals/get-transcript</a></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6">No copy on hand? Request a free transcript at <a href="https://www.irs.gov/individuals/get-transcript" target="_blank" style="color:var(--gold)">irs.gov/individuals/get-transcript</a></div>
       <div id="w2-scan-result" style="display:none;font-size:11px;color:var(--green);margin-top:6px"></div>
+    </div>
+
+    <div class="ucard primary">
+      <div class="ucard-top">
+        <span class="ucard-icon">🏦</span>
+        <div class="ucard-info">
+          <div class="ucard-name">Bank statement</div>
+          <div class="ucard-why">Confirms account numbers and institution names, which we use to pre-fill your financial notification tasks.</div>
+        </div>
+        <span class="ucard-badge opt" id="bank-badge">Optional</span>
+      </div>
+      <div class="ufiles" id="bank-files"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label class="ulbl" id="bank-lbl"><input type="file" accept=".pdf,.txt,.csv" style="display:none" onchange="handleFile('bank',this)"/> + Upload bank statement</label>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">PDF, CSV, or text file. No copy? Log in to your bank's website and download the most recent statement.</div>
+    </div>
+
+    <div class="ucard secondary">
+      <div class="ucard-top">
+        <span class="ucard-icon">📁</span>
+        <div class="ucard-info">
+          <div class="ucard-name">Other documents</div>
+          <div class="ucard-why">Insurance policies, property deeds, trust documents, or anything else you want to keep on hand. Stored locally for easy reference.</div>
+        </div>
+        <span class="ucard-badge opt" id="other-badge">Optional</span>
+      </div>
+      <div class="ufiles" id="other-files"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label class="ulbl" id="other-lbl"><input type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.csv,.doc,.docx" style="display:none" onchange="handleFile('other',this)"/> + Upload document</label>
+      </div>
     </div>
   </div>
   <div class="ufoot">
-    <button class="skip-btn" onclick="startLoad()">Skip for now and add later</button>
+    <button class="skip-btn" onclick="startLoad()">Skip for now</button>
     <button class="btn-gold" onclick="startLoad()">Continue to my checklist</button>
   </div>
 </div>
@@ -561,7 +577,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       </div>
 
 <!-- CHAT -->
-<button class="chat-fab" id="chat-fab" onclick="toggleChat()">💬</button>
+<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="Ask a question" style="font-size:15px;font-weight:600;letter-spacing:.02em;font-family:inherit;color:#0f0e0c">Ask</button>
 <div class="chat-panel" id="chat-panel">
   <div class="chat-ctx-bar" id="chat-ctx-bar"></div>
   <div class="chat-panel-hdr"><div class="chat-hdr-dot"></div><div class="chat-hdr-title">Have a question? We are here.</div></div>
