@@ -25,11 +25,17 @@ const API_BASE = (typeof window !== 'undefined' && window.PASSAGE_API_BASE)
   ? window.PASSAGE_API_BASE
   : 'http://localhost:8787';
 
+// Set to true by checkApiConnectivity() in main.js once the backend responds.
+// When the backend is available, all calls go through the proxy regardless of
+// whether a browser key is also present — avoids CORS errors on direct calls.
+window._backendAvailable = false;
+
 function isDemoMode() {
   return typeof window !== 'undefined' &&
     window.ANTHROPIC_API_KEY &&
     window.ANTHROPIC_API_KEY !== 'sk-ant-YOUR-KEY-HERE' &&
-    !window.PASSAGE_API_BASE;
+    !window.PASSAGE_API_BASE &&
+    !window._backendAvailable;
 }
 
 function apiRoot() { return (API_BASE || 'http://localhost:8787').replace(/\/$/, ''); }

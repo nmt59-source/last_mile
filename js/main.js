@@ -21,13 +21,19 @@ function saveApiKey() {
 // Check whether AI calls will work. Shows the key modal if neither demo mode
 // nor a reachable backend is available.
 async function checkApiConnectivity() {
-  if (isDemoMode()) return; // key already set — we're good
   try {
     const res = await fetch(apiRoot() + '/health', { signal: AbortSignal.timeout(3000) });
-    if (res.ok) return; // backend is running — we're good
+    if (res.ok) {
+      // Backend is reachable — route all API calls through the proxy.
+      // This avoids CORS errors that occur when calling api.anthropic.com
+      // directly from the browser, even in demo mode.
+      window._backendAvailable = true;
+      return;
+    }
   } catch (_) {}
-  // Backend unreachable and no key set — prompt the user
-  showApiKeyModal();
+  // Backend unreachable — fall back to direct browser mode if a key is saved,
+  // otherwise prompt the user to enter one.
+  if (!isDemoMode()) showApiKeyModal();
 }
 
 // ── INIT ──
